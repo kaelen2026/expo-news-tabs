@@ -84,8 +84,15 @@ export default function StoryDetailScreen() {
               onShare={() => setShareSheetVisible(true)}
             />
           ),
+          headerTitle: () => (
+            <Text
+              numberOfLines={1}
+              style={{ color: colors.text, fontSize: 17, fontWeight: "900", maxWidth: 220 }}
+            >
+              {story.title}
+            </Text>
+          ),
           headerTitleAlign: "center",
-          title: story.category,
         }}
       />
       <Pressable
