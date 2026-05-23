@@ -48,8 +48,7 @@ export const newsStories: NewsStory[] = [
   {
     id: "startup-robots",
     title: "Warehouse robotics startup opens second factory",
-    summary:
-      "The expansion follows demand from regional grocers and medical supply distributors.",
+    summary: "The expansion follows demand from regional grocers and medical supply distributors.",
     body: [
       "A robotics company focused on small warehouse automation opened its second manufacturing site, doubling its annual production capacity.",
       "The company builds modular picking systems for facilities that are too small for traditional automation lines. Customers can begin with a single aisle and expand as volume grows.",

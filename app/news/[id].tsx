@@ -4,18 +4,12 @@ import { Ellipsis, Share2 } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
-import { PhotoWallModal } from "@/components/photo-wall-modal";
-import { ShareSheet } from "@/components/share-sheet";
-import { useAppTheme } from "@/contexts/app-theme";
-import { getStoryById, newsStories } from "@/data/news";
+import { PhotoWallModal } from "../../components/photo-wall-modal";
+import { ShareSheet } from "../../components/share-sheet";
+import { useAppTheme } from "../../contexts/app-theme";
+import { getStoryById, newsStories } from "../../data/news";
 
-function HeaderActions({
-  onShare,
-  tintColor,
-}: {
-  onShare?: () => void;
-  tintColor?: string;
-}) {
+function HeaderActions({ onShare, tintColor }: { onShare?: () => void; tintColor?: string }) {
   const { colors } = useAppTheme();
   const iconColor = tintColor ?? colors.accent;
 
@@ -79,11 +73,7 @@ export default function StoryDetailScreen() {
     >
       <Stack.Screen
         options={{
-          headerRight: () => (
-            <HeaderActions
-              onShare={() => setShareSheetVisible(true)}
-            />
-          ),
+          headerRight: () => <HeaderActions onShare={() => setShareSheetVisible(true)} />,
           headerTitle: () => (
             <Text
               numberOfLines={1}

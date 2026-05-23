@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, View } from "react-native";
 
-import { NewsCard } from "@/components/news-card";
-import { useAppTheme } from "@/contexts/app-theme";
-import { newsStories, type NewsStory } from "@/data/news";
+import { NewsCard } from "../../components/news-card";
+import { useAppTheme } from "../../contexts/app-theme";
+import { type NewsStory, newsStories } from "../../data/news";
 
 type FeedItem = {
   feedId: string;
@@ -21,7 +21,7 @@ function createFeedPage(page: number): FeedItem[] {
 
 export default function HomeScreen() {
   const { colors } = useAppTheme();
-  const [page, setPage] = useState(1);
+  const [, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);

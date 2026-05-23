@@ -3,8 +3,8 @@ import { Check, Copy, Share2, X } from "lucide-react-native";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, Share, Text, View } from "react-native";
 
-import { useAppTheme } from "@/contexts/app-theme";
-import type { NewsStory } from "@/data/news";
+import { useAppTheme } from "../contexts/app-theme";
+import type { NewsStory } from "../data/news";
 
 function SheetAction({
   icon,
@@ -63,7 +63,7 @@ export function ShareSheet({
       setCopied(false);
       setMessage("");
     }
-  }, [story.id, visible]);
+  }, [visible]);
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(shareUrl);
@@ -100,7 +100,7 @@ export function ShareSheet({
 
       await handleCopy();
       setMessage("Sharing is not available here. Link copied.");
-    } catch (error) {
+    } catch {
       await handleCopy();
       setMessage("Sharing was cancelled or unavailable. Link copied.");
     }

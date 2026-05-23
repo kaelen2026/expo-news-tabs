@@ -8,7 +8,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@expo/metro-runtime": "*",
@@ -32,7 +35,9 @@
     "react-native-web": "*"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
     "@types/react": "~19.2.14",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.7"
   }
 }

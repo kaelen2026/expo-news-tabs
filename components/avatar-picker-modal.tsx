@@ -1,9 +1,9 @@
-import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { Camera, Images, X } from "lucide-react-native";
 import { Modal, Pressable, Text, View } from "react-native";
 
-import { useAppTheme } from "@/contexts/app-theme";
+import { useAppTheme } from "../contexts/app-theme";
 
 export type AvatarOption = {
   id: string;
@@ -121,7 +121,11 @@ export function AvatarPickerModal({
                   <Image
                     source={option.imageUrl}
                     contentFit="cover"
-                    style={{ backgroundColor: colors.imagePlaceholder, height: "100%", width: "100%" }}
+                    style={{
+                      backgroundColor: colors.imagePlaceholder,
+                      height: "100%",
+                      width: "100%",
+                    }}
                   />
                 </Pressable>
               );

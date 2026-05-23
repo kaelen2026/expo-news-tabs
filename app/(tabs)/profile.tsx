@@ -1,11 +1,11 @@
-import { useRouter } from "expo-router";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import { Camera, ChevronRight, Settings } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
-import { AvatarPickerModal, type AvatarOption } from "@/components/avatar-picker-modal";
-import { useAppTheme } from "@/contexts/app-theme";
+import { type AvatarOption, AvatarPickerModal } from "../../components/avatar-picker-modal";
+import { useAppTheme } from "../../contexts/app-theme";
 
 const interests = ["Local", "Science", "Business", "Culture"];
 const defaultAvatarUrl =
@@ -180,7 +180,10 @@ export default function ProfileScreen() {
                 >
                   {stat.value}
                 </Text>
-                <Text selectable style={{ color: colors.mutedSoft, fontSize: 12, fontWeight: "700" }}>
+                <Text
+                  selectable
+                  style={{ color: colors.mutedSoft, fontSize: 12, fontWeight: "700" }}
+                >
                   {stat.label}
                 </Text>
               </View>

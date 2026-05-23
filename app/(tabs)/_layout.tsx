@@ -2,7 +2,7 @@ import { Tabs, useRouter } from "expo-router";
 import { CircleUserRound, Newspaper, Settings } from "lucide-react-native";
 import { Pressable, Text } from "react-native";
 
-import { useAppTheme } from "@/contexts/app-theme";
+import { useAppTheme } from "../../contexts/app-theme";
 
 export default function TabLayout() {
   const { colors } = useAppTheme();
@@ -65,9 +65,7 @@ export default function TabLayout() {
             </Pressable>
           ),
           headerTitle: () => (
-            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "900" }}>
-              Profile
-            </Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "900" }}>Profile</Text>
           ),
           tabBarIcon: ({ color }) => (
             <CircleUserRound color={String(color)} size={22} strokeWidth={2.2} />

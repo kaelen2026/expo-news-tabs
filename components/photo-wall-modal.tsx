@@ -3,8 +3,8 @@ import { X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
 
-import { useAppTheme } from "@/contexts/app-theme";
-import type { NewsStory } from "@/data/news";
+import { useAppTheme } from "../contexts/app-theme";
+import type { NewsStory } from "../data/news";
 
 export function PhotoWallModal({
   initialStoryId,
@@ -34,7 +34,12 @@ export function PhotoWallModal({
   }
 
   return (
-    <Modal animationType="fade" onRequestClose={onClose} presentationStyle="fullScreen" visible={visible}>
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      presentationStyle="fullScreen"
+      visible={visible}
+    >
       <View style={{ backgroundColor: "#050807", flex: 1 }}>
         <View
           style={{

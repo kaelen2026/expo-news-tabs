@@ -32,17 +32,24 @@ const darkColors = {
 type AppTheme = {
   colors: typeof lightColors;
   darkMode: boolean;
-  setDarkMode: (enabled: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
+  themeMode: ThemeMode;
 };
+
+export type ThemeMode = "system" | "light" | "dark";
 
 const AppThemeContext = createContext<AppTheme | null>(null);
 
 export function AppThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
-  const [darkMode, setDarkMode] = useState(systemScheme === "dark");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("system");
+  const darkMode = themeMode === "system" ? systemScheme === "dark" : themeMode === "dark";
   const colors = darkMode ? darkColors : lightColors;
 
-  const value = useMemo(() => ({ colors, darkMode, setDarkMode }), [colors, darkMode]);
+  const value = useMemo(
+    () => ({ colors, darkMode, setThemeMode, themeMode }),
+    [colors, darkMode, themeMode],
+  );
 
   return <AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>;
 }
