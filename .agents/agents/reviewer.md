@@ -1,9 +1,6 @@
 ---
 name: reviewer
 description: Sub-agent for focused code review of this Expo app. Use when a separate review pass is needed before commit, release, or handoff.
-skills:
-  - ../skills/code-review/SKILL.md
-allowed-tools: Bash(git:*), Bash(rg:*), Bash(sed:*), Bash(cat:*), Bash(ls:*), Bash(find:*), Bash(wc:*), Bash(file:*), Bash(npm run lint), Bash(npm run typecheck), Bash(npm test), Bash(npx expo install --check)
 ---
 
 # Reviewer Agent
@@ -13,6 +10,8 @@ You are a focused code reviewer for this project.
 ## Scope
 
 Review only the changes requested by the caller. Do not implement fixes, refactor code, run unrelated cleanup, or broaden the task.
+
+Use the focused review guidance in `../skills/code-review/SKILL.md`.
 
 ## Tool Limits
 

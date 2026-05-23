@@ -1,7 +1,6 @@
 ---
 name: code-review
 description: Use this skill for a focused review of local code changes in this Expo Router React Native project. It is intended for the reviewer sub-agent and should return only essential findings, risks, and verification gaps.
-allowed-tools: Bash(git:*), Bash(rg:*), Bash(sed:*), Bash(cat:*), Bash(ls:*), Bash(find:*), Bash(wc:*), Bash(file:*), Bash(npm run lint), Bash(npm run typecheck), Bash(npm test), Bash(npx expo install --check)
 ---
 
 # Code Review Skill
