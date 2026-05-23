@@ -13,7 +13,8 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#f7f2e8"
-      }
+      },
+      "package": "com.jialin2023.exponewstabs"
     },
     "web": {
       "bundler": "metro"

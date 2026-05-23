@@ -31,3 +31,12 @@ See the detailed project rules in `.agents/rules/`:
 - `.agents/rules/typescript.md`
 - `.agents/rules/quality.md`
 - `.agents/rules/workflow.md`
+
+See project-local skills in `.agents/skills/`:
+
+- `.agents/skills/deploy/SKILL.md`
+- `.agents/skills/code-review/SKILL.md`
+
+See project-local sub-agents in `.agents/agents/`:
+
+- `.agents/agents/reviewer.md`

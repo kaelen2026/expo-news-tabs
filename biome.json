@@ -1,7 +1,15 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "files": {
-    "includes": ["**", "!node_modules", "!.expo", "!package-lock.json", "!expo-env.d.ts"]
+    "includes": [
+      "**",
+      "!android",
+      "!ios",
+      "!node_modules",
+      "!.expo",
+      "!package-lock.json",
+      "!expo-env.d.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
