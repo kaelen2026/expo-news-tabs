@@ -29,11 +29,36 @@ const darkColors = {
   text: "#f3faf8",
 };
 
+export const layoutTokens = {
+  borderWidth: {
+    hairline: 1,
+  },
+  radius: {
+    sm: 6,
+    md: 8,
+    lg: 18,
+    pill: 999,
+  },
+  size: {
+    iconFrame: 38,
+  },
+  space: {
+    xxs: 3,
+    xs: 4,
+    sm: 6,
+    md: 12,
+    lg: 16,
+    xl: 18,
+    rowY: 14,
+  },
+};
+
 type AppTheme = {
   colors: typeof lightColors;
   darkMode: boolean;
   setThemeMode: (mode: ThemeMode) => void;
   themeMode: ThemeMode;
+  tokens: typeof layoutTokens;
 };
 
 export type ThemeMode = "system" | "light" | "dark";
@@ -47,7 +72,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   const colors = darkMode ? darkColors : lightColors;
 
   const value = useMemo(
-    () => ({ colors, darkMode, setThemeMode, themeMode }),
+    () => ({ colors, darkMode, setThemeMode, themeMode, tokens: layoutTokens }),
     [colors, darkMode, themeMode],
   );
 
