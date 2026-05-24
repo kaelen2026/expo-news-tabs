@@ -34,7 +34,7 @@ Expo app built with the React Native New Architecture.
 
 ## Project Layout
 
-```
+```bash
 app/                       Expo Router routes ONLY
   _layout.tsx              Root Stack + AppThemeProvider + StatusBar
   (tabs)/_layout.tsx       Tabs: Home + Profile (Settings button in header)
@@ -64,7 +64,7 @@ live inside `app/`.
 
 ## Quick Start
 
-Prerequisites: Node 20+, npm, and either the Expo Go app or a local
+Prerequisites: Node 24+, npm, and either the Expo Go app or a local
 iOS/Android simulator.
 
 ```sh
