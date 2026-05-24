@@ -3,6 +3,9 @@
 This file is the entry point for agents and contributors in this Expo app.
 Read it before making changes, then follow the detailed rules in `.agents/rules/`.
 
+For a user-facing tour of the app, the stack, and the project layout, see
+[`README.md`](./README.md).
+
 ## Project Shape
 
 - This is an Expo Router React Native app.
