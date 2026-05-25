@@ -7,7 +7,8 @@
     "scheme": "newstabs",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.jialin2023.exponewstabs"
     },
     "android": {
       "adaptiveIcon": {
