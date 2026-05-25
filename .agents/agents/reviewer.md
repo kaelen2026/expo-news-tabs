@@ -28,6 +28,7 @@ Use the project rules as review standards:
 - `../../AGENTS.md`
 - `../rules/style-system.md` (mobile-only)
 - `../rules/expo-router.md` (mobile-only)
+- `../rules/api-design.md` (api workspace + the AppRouter contract)
 - `../rules/typescript.md` (every workspace)
 - `../rules/quality.md` (every workspace)
 - `../rules/workflow.md` (every workspace)

@@ -41,19 +41,21 @@ pnpm --filter mobile dev   # Expo dev server
 
 ## Reference Rules
 
-The detailed rules in `.agents/rules/` apply to the mobile workspace
-(they predate the monorepo and reference Expo-specific patterns):
+The rules in `.agents/rules/` apply across the monorepo. The ones marked
+*mobile-only* predate the monorepo and only govern `apps/mobile`:
 
-- `.agents/rules/style-system.md`
-- `.agents/rules/expo-router.md`
-- `.agents/rules/typescript.md`
-- `.agents/rules/quality.md`
-- `.agents/rules/workflow.md`
+- `.agents/rules/style-system.md` (mobile-only)
+- `.agents/rules/expo-router.md` (mobile-only)
+- `.agents/rules/api-design.md` (api workspace + the AppRouter contract)
+- `.agents/rules/typescript.md` (all workspaces)
+- `.agents/rules/quality.md` (all workspaces)
+- `.agents/rules/workflow.md` (all workspaces)
 
 See project-local skills in `.agents/skills/`:
 
-- `.agents/skills/deploy/SKILL.md`
+- `.agents/skills/api-design/SKILL.md`
 - `.agents/skills/code-review/SKILL.md`
+- `.agents/skills/deploy/SKILL.md`
 
 See project-local sub-agents in `.agents/agents/`:
 

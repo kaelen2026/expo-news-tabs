@@ -29,6 +29,7 @@ Apply these project rules:
 
 - `.agents/rules/style-system.md` (mobile-only)
 - `.agents/rules/expo-router.md` (mobile-only)
+- `.agents/rules/api-design.md` (api workspace + the AppRouter contract)
 - `.agents/rules/typescript.md` (every workspace)
 - `.agents/rules/quality.md` (every workspace)
 - `.agents/rules/workflow.md` (every workspace)
