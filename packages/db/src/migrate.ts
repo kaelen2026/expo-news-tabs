@@ -1,4 +1,5 @@
-import { closeDb, runMigrations } from "./client";
+import { closeDb } from "./client";
+import { runMigrations } from "./migrator";
 
 async function main() {
   console.log("running migrations…");

@@ -1,14 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import {
-  closeDb,
-  favorite,
-  getDb,
-  newsStory,
-  preference,
-  readState,
-  runMigrations,
-  user,
-} from "db";
+import { closeDb, favorite, getDb, newsStory, preference, readState, user } from "db";
+import { runMigrations } from "db/migrator";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { appRouter } from "./router";
