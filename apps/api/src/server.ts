@@ -38,6 +38,11 @@ app.use(
 
 app.get("/", (c) => c.json({ status: "ok", service: "expo-news-tabs api" }));
 
+// Liveness probe — process is up and the event loop is responsive. Kept
+// dependency-free on purpose: a DB hiccup should not cause the orchestrator
+// to recycle the pod. Reserve a future /readyz for deep dependency checks.
+app.get("/healthz", (c) => c.json({ status: "ok" }));
+
 // better-auth handler — used by mobile for sign-in/sign-up and by anyone
 // hitting /auth/get-session etc. Web continues to use its own /api/auth/* on :3000.
 app.all("/auth/*", (c) => auth.handler(c.req.raw));
