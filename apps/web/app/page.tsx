@@ -1,10 +1,20 @@
 "use client";
 
+import { useMemo } from "react";
+import { AsyncState } from "./async-state";
 import { SessionIndicator } from "./session-indicator";
 import { trpc } from "./trpc-provider";
 
 export default function HomePage() {
-  const { data, isLoading, error } = trpc.news.list.useQuery({ page: 1 });
+  const query = trpc.news.list.useInfiniteQuery(
+    { limit: 6 },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
+  );
+
+  const stories = useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data],
+  );
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
@@ -23,23 +33,51 @@ export default function HomePage() {
         </p>
       </header>
 
-      {isLoading && <p className="opacity-60">Loading stories…</p>}
-      {error && <p className="text-red-600">Failed to load: {error.message}</p>}
+      <AsyncState
+        isLoading={query.isLoading}
+        isError={query.isError && stories.length === 0}
+        errorMessage={query.error?.message}
+        isEmpty={query.isSuccess && stories.length === 0}
+        loadingLabel="Loading stories…"
+        emptyLabel="No stories yet — check back soon."
+        onRetry={() => query.refetch()}
+      >
+        <ul className="space-y-6">
+          {stories.map((story) => (
+            <li
+              key={story.id}
+              className="rounded-2xl border border-black/10 bg-white/60 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5"
+            >
+              <p className="text-xs uppercase tracking-wider opacity-60">
+                {story.category} · {story.readTime}
+              </p>
+              <h2 className="mt-1 text-xl font-semibold">{story.title}</h2>
+              <p className="mt-2 text-sm opacity-80">{story.summary}</p>
+            </li>
+          ))}
+        </ul>
 
-      <ul className="space-y-6">
-        {data?.stories.map((story) => (
-          <li
-            key={story.feedId}
-            className="rounded-2xl border border-black/10 bg-white/60 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5"
-          >
-            <p className="text-xs uppercase tracking-wider opacity-60">
-              {story.category} · {story.readTime}
+        <div className="mt-8 flex flex-col items-center gap-2">
+          {query.hasNextPage && (
+            <button
+              type="button"
+              onClick={() => query.fetchNextPage()}
+              disabled={query.isFetchingNextPage}
+              className="rounded-md border border-black/15 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-white/15"
+            >
+              {query.isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
+          {!query.hasNextPage && stories.length > 0 && (
+            <p className="text-xs opacity-50">No more stories.</p>
+          )}
+          {query.isError && stories.length > 0 && (
+            <p className="text-xs text-red-600">
+              Couldn't load more: {query.error?.message ?? "Unknown error"}
             </p>
-            <h2 className="mt-1 text-xl font-semibold">{story.title}</h2>
-            <p className="mt-2 text-sm opacity-80">{story.summary}</p>
-          </li>
-        ))}
-      </ul>
+          )}
+        </div>
+      </AsyncState>
     </main>
   );
 }

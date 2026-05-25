@@ -1,10 +1,8 @@
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { closeDb, getDb } from "./client";
+import { closeDb, runMigrations } from "./client";
 
 async function main() {
-  const db = getDb();
   console.log("running migrations…");
-  await migrate(db, { migrationsFolder: new URL("../migrations", import.meta.url).pathname });
+  await runMigrations();
   console.log("migrations complete.");
 }
 

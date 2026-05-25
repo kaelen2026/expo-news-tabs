@@ -20,6 +20,7 @@ async function main() {
         publishedAt: sql`excluded.published_at`,
         readTime: sql`excluded.read_time`,
         imageUrl: sql`excluded.image_url`,
+        createdAt: sql`excluded.created_at`,
       },
     });
   console.log("seed complete.");

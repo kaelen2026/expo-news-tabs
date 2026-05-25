@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, Share, Text, View } from "react-native";
 
 import { useAppTheme } from "../contexts/app-theme";
-import type { NewsStory } from "../data/news";
+import type { NewsStory } from "../lib/news-types";
 
 function SheetAction({
   icon,

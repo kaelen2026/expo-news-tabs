@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 
 import { useAppTheme } from "../contexts/app-theme";
-import type { NewsStory } from "../data/news";
+import type { NewsStory } from "../lib/news-types";
 
 export function NewsCard({ story }: { story: NewsStory }) {
   const { colors, darkMode } = useAppTheme();

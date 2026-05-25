@@ -4,10 +4,11 @@ import { Ellipsis, Share2 } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { AsyncState } from "../../components/async-state";
 import { PhotoWallModal } from "../../components/photo-wall-modal";
 import { ShareSheet } from "../../components/share-sheet";
 import { useAppTheme } from "../../contexts/app-theme";
-import { getStoryById, newsStories } from "../../data/news";
+import { trpc } from "../../lib/trpc";
 
 function HeaderActions({ onShare, tintColor }: { onShare?: () => void; tintColor?: string }) {
   const { colors } = useAppTheme();
@@ -41,29 +42,44 @@ export default function StoryDetailScreen() {
   const { colors } = useAppTheme();
   const [photoWallVisible, setPhotoWallVisible] = useState(false);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
-  const story = getStoryById(id);
 
-  if (!story) {
+  const query = trpc.news.byId.useQuery({ id }, { enabled: Boolean(id), retry: false });
+  const story = query.data;
+  const notFound = query.isError && query.error?.data?.code === "NOT_FOUND";
+
+  if (query.isLoading || query.isError) {
     return (
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ backgroundColor: colors.background, gap: 12, padding: 16 }}
+        contentContainerStyle={{ backgroundColor: colors.background, padding: 16 }}
       >
         <Stack.Screen
           options={{
             headerRight: () => <HeaderActions />,
             headerTitleAlign: "center",
-            title: "Story not found",
+            title: notFound ? "Story not found" : "Loading…",
           }}
         />
-        <Text selectable style={{ color: colors.text, fontSize: 26, fontWeight: "900" }}>
-          Story not found
-        </Text>
-        <Text selectable style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
-          This article may have moved or is no longer available.
-        </Text>
+        <AsyncState
+          isLoading={query.isLoading}
+          isError={query.isError}
+          errorMessage={
+            notFound
+              ? "This article may have moved or is no longer available."
+              : query.error?.message
+          }
+          isEmpty={false}
+          loadingLabel="Loading story…"
+          onRetry={notFound ? undefined : () => query.refetch()}
+        >
+          {null}
+        </AsyncState>
       </ScrollView>
     );
+  }
+
+  if (!story) {
+    return null;
   }
 
   return (
@@ -102,7 +118,6 @@ export default function StoryDetailScreen() {
         <PhotoWallModal
           initialStoryId={story.id}
           onClose={() => setPhotoWallVisible(false)}
-          stories={newsStories}
           visible
         />
       ) : null}
