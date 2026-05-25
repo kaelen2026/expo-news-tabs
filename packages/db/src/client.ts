@@ -1,5 +1,4 @@
 import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import * as schema from "./schema";
 
@@ -25,10 +24,4 @@ export async function closeDb(): Promise<void> {
   if (!cached) return;
   await cached.client.end({ timeout: 5 });
   cached = undefined;
-}
-
-export const MIGRATIONS_FOLDER = new URL("../migrations", import.meta.url).pathname;
-
-export async function runMigrations(db: Database = getDb()): Promise<void> {
-  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
 }
