@@ -18,6 +18,7 @@
     "@hono/node-server": "^1.13.7",
     "@hono/trpc-server": "^0.3.4",
     "@trpc/server": "^11.0.0-rc.682",
+    "auth-config": "workspace:*",
     "better-auth": "^1.6.11",
     "db": "workspace:*",
     "dotenv": "^16.4.7",
