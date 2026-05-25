@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getStoryById, newsStories } from "./news";
+import { getStoryById, listStories } from "./news";
 import { publicProcedure, router } from "./trpc";
 
 export const appRouter = router({
@@ -13,20 +13,21 @@ export const appRouter = router({
           })
           .optional(),
       )
-      .query(({ input }) => {
+      .query(async ({ input }) => {
         const page = input?.page ?? 1;
+        const stories = await listStories();
         return {
           page,
           hasMore: page < 3,
-          stories: newsStories.map((story) => ({
+          stories: stories.map((story) => ({
             ...story,
             feedId: `${page}-${story.id}`,
           })),
         };
       }),
 
-    byId: publicProcedure.input(z.object({ id: z.string() })).query(({ input }) => {
-      const story = getStoryById(input.id);
+    byId: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
+      const story = await getStoryById(input.id);
       if (!story) {
         throw new TRPCError({ code: "NOT_FOUND", message: `Story ${input.id} not found` });
       }

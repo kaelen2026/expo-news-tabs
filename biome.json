@@ -15,7 +15,8 @@
       "!**/next-env.d.ts",
       "!apps/web/app/globals.css",
       "!**/pnpm-lock.yaml",
-      "!**/package-lock.json"
+      "!**/package-lock.json",
+      "!packages/db/migrations"
     ]
   },
   "formatter": {

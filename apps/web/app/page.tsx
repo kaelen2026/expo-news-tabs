@@ -1,5 +1,6 @@
 "use client";
 
+import { SessionIndicator } from "./session-indicator";
 import { trpc } from "./trpc-provider";
 
 export default function HomePage() {
@@ -8,10 +9,15 @@ export default function HomePage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <header className="mb-10">
-        <p className="text-sm uppercase tracking-widest text-[var(--color-accent)]">
-          Morning Brief
-        </p>
-        <h1 className="mt-2 text-4xl font-semibold">News Tabs — Web</h1>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm uppercase tracking-widest text-[var(--color-accent)]">
+              Morning Brief
+            </p>
+            <h1 className="mt-2 text-4xl font-semibold">News Tabs — Web</h1>
+          </div>
+          <SessionIndicator />
+        </div>
         <p className="mt-3 text-base opacity-70">
           Next.js 16 · App Router · Tailwind v4 · tRPC client talking to the Hono API.
         </p>
