@@ -31,6 +31,10 @@ export type Context = {
   user: SessionUser | null;
   session: SessionRecord | null;
   headers: Headers;
+  // Per-request identifier (uuid). Attached by the Hono request logger
+  // and forwarded into the tRPC context so the `onError` hook and any
+  // procedure that wants to emit logs can correlate them.
+  requestId: string;
 };
 
 const t = initTRPC.context<Context>().create();

@@ -3,10 +3,11 @@ import { serve } from "@hono/node-server";
 import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { appRouter } from "./app.router";
 import { getConfig } from "./core/config";
 import { createContextFactory } from "./core/context";
+import { type AppEnv, logger } from "./core/logger";
+import { requestLogger } from "./core/request-logger";
 import { auth } from "./modules/auth";
 
 const config = getConfig();
@@ -19,9 +20,9 @@ const createContext = createContextFactory(async (headers) => {
   return { user: result.user, session: result.session };
 });
 
-const app = new Hono();
+const app = new Hono<AppEnv>();
 
-app.use("*", logger());
+app.use("*", requestLogger);
 app.use(
   "*",
   cors({
@@ -46,10 +47,22 @@ app.use(
   trpcServer({
     router: appRouter,
     endpoint: "/trpc",
-    createContext: (_opts, c) => createContext(c.req.raw.headers),
+    createContext: (_opts, c) => createContext(c.req.raw.headers, c.var.requestId),
+    onError({ error, path, type, ctx }) {
+      // Expected client-facing errors (bad input, unauthorized, etc.)
+      // still bubble back to the caller; only surface the unexpected
+      // ones at error level so log review can stay focused.
+      const child = ctx?.requestId ? logger.child({ requestId: ctx.requestId }) : logger;
+      const meta = { path, type, code: error.code };
+      if (error.code === "INTERNAL_SERVER_ERROR") {
+        child.error({ ...meta, err: error }, "trpc internal error");
+      } else {
+        child.warn(meta, "trpc error");
+      }
+    },
   }),
 );
 
 serve({ fetch: app.fetch, port: config.port }, (info) => {
-  console.log(`api listening on http://localhost:${info.port}`);
+  logger.info({ port: info.port }, "api listening");
 });

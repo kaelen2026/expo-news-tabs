@@ -9,7 +9,7 @@ import { appRouter } from "./router";
 const TEST_URL = process.env.TEST_DATABASE_URL;
 
 function anonymousContext(): Context {
-  return { user: null, session: null, headers: new Headers() };
+  return { user: null, session: null, headers: new Headers(), requestId: "test" };
 }
 
 function authedContext(overrides: Partial<NonNullable<Context["user"]>> = {}): Context {
@@ -34,7 +34,7 @@ function authedContext(overrides: Partial<NonNullable<Context["user"]>> = {}): C
     ipAddress: null,
     userAgent: null,
   };
-  return { user, session, headers: new Headers() };
+  return { user, session, headers: new Headers(), requestId: "test" };
 }
 
 // These tests need a live Postgres dedicated to testing.

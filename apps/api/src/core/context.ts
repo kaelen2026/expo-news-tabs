@@ -9,12 +9,13 @@ export type SessionResolver = (
 ) => Promise<{ user: SessionUser; session: SessionRecord } | null>;
 
 export function createContextFactory(resolveSession: SessionResolver) {
-  return async function createContext(headers: Headers): Promise<Context> {
+  return async function createContext(headers: Headers, requestId: string): Promise<Context> {
     const resolved = await resolveSession(headers);
     return {
       user: resolved?.user ?? null,
       session: resolved?.session ?? null,
       headers,
+      requestId,
     };
   };
 }
