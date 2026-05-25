@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from "expo-router";
-import { CircleUserRound, Newspaper, Settings } from "lucide-react-native";
+import { CircleUserRound, Newspaper, Settings, Star } from "lucide-react-native";
 import { Pressable, Text } from "react-native";
 
 import { useAppTheme } from "../../contexts/app-theme";
@@ -35,6 +35,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <Newspaper color={String(color)} size={22} strokeWidth={2.2} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          title: "Favorites",
+          headerTitle: () => (
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "900" }}>Favorites</Text>
+          ),
+          tabBarIcon: ({ color }) => <Star color={String(color)} size={22} strokeWidth={2.2} />,
         }}
       />
       <Tabs.Screen

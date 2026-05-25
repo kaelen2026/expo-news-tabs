@@ -1,19 +1,30 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSession } from "@/lib/auth-client";
 import { AsyncState } from "./async-state";
 import { SessionIndicator } from "./session-indicator";
+import { StoryActions } from "./story-actions";
 import { trpc } from "./trpc-provider";
 
 export default function HomePage() {
-  const query = trpc.news.list.useInfiniteQuery(
+  const session = useSession();
+  const isAuthenticated = Boolean(session.data?.user);
+
+  const newsQuery = trpc.news.list.useInfiniteQuery(
     { limit: 6 },
     { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
   );
 
+  const favoritesQuery = trpc.favorites.ids.useQuery(undefined, { enabled: isAuthenticated });
+  const readsQuery = trpc.reads.ids.useQuery(undefined, { enabled: isAuthenticated });
+
+  const favoriteSet = useMemo(() => new Set(favoritesQuery.data ?? []), [favoritesQuery.data]);
+  const readSet = useMemo(() => new Set(readsQuery.data ?? []), [readsQuery.data]);
+
   const stories = useMemo(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
-    [query.data],
+    () => newsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [newsQuery.data],
   );
 
   return (
@@ -34,46 +45,58 @@ export default function HomePage() {
       </header>
 
       <AsyncState
-        isLoading={query.isLoading}
-        isError={query.isError && stories.length === 0}
-        errorMessage={query.error?.message}
-        isEmpty={query.isSuccess && stories.length === 0}
+        isLoading={newsQuery.isLoading}
+        isError={newsQuery.isError && stories.length === 0}
+        errorMessage={newsQuery.error?.message}
+        isEmpty={newsQuery.isSuccess && stories.length === 0}
         loadingLabel="Loading stories…"
         emptyLabel="No stories yet — check back soon."
-        onRetry={() => query.refetch()}
+        onRetry={() => newsQuery.refetch()}
       >
         <ul className="space-y-6">
-          {stories.map((story) => (
-            <li
-              key={story.id}
-              className="rounded-2xl border border-black/10 bg-white/60 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5"
-            >
-              <p className="text-xs uppercase tracking-wider opacity-60">
-                {story.category} · {story.readTime}
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">{story.title}</h2>
-              <p className="mt-2 text-sm opacity-80">{story.summary}</p>
-            </li>
-          ))}
+          {stories.map((story) => {
+            const isFavorite = favoriteSet.has(story.id);
+            const isRead = readSet.has(story.id);
+            return (
+              <li
+                key={story.id}
+                className={`rounded-2xl border border-black/10 bg-white/60 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5 ${
+                  isRead ? "opacity-70" : ""
+                }`}
+              >
+                <p className="text-xs uppercase tracking-wider opacity-60">
+                  {story.category} · {story.readTime}
+                </p>
+                <h2 className="mt-1 text-xl font-semibold">{story.title}</h2>
+                <p className="mt-2 text-sm opacity-80">{story.summary}</p>
+                <StoryActions
+                  storyId={story.id}
+                  isAuthenticated={isAuthenticated}
+                  isFavorite={isFavorite}
+                  isRead={isRead}
+                />
+              </li>
+            );
+          })}
         </ul>
 
         <div className="mt-8 flex flex-col items-center gap-2">
-          {query.hasNextPage && (
+          {newsQuery.hasNextPage && (
             <button
               type="button"
-              onClick={() => query.fetchNextPage()}
-              disabled={query.isFetchingNextPage}
+              onClick={() => newsQuery.fetchNextPage()}
+              disabled={newsQuery.isFetchingNextPage}
               className="rounded-md border border-black/15 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-white/15"
             >
-              {query.isFetchingNextPage ? "Loading…" : "Load more"}
+              {newsQuery.isFetchingNextPage ? "Loading…" : "Load more"}
             </button>
           )}
-          {!query.hasNextPage && stories.length > 0 && (
+          {!newsQuery.hasNextPage && stories.length > 0 && (
             <p className="text-xs opacity-50">No more stories.</p>
           )}
-          {query.isError && stories.length > 0 && (
+          {newsQuery.isError && stories.length > 0 && (
             <p className="text-xs text-red-600">
-              Couldn't load more: {query.error?.message ?? "Unknown error"}
+              Couldn't load more: {newsQuery.error?.message ?? "Unknown error"}
             </p>
           )}
         </div>

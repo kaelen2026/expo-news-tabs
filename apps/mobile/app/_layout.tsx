@@ -2,15 +2,18 @@ import { Stack } from "expo-router/stack";
 import { StatusBar } from "expo-status-bar";
 
 import { AppThemeProvider, useAppTheme } from "../contexts/app-theme";
+import { AuthProvider } from "../lib/auth";
 import { TrpcProvider } from "../lib/trpc";
 
 export default function RootLayout() {
   return (
-    <TrpcProvider>
-      <AppThemeProvider>
-        <RootStack />
-      </AppThemeProvider>
-    </TrpcProvider>
+    <AuthProvider>
+      <TrpcProvider>
+        <AppThemeProvider>
+          <RootStack />
+        </AppThemeProvider>
+      </TrpcProvider>
+    </AuthProvider>
   );
 }
 
@@ -36,6 +39,8 @@ function RootStack() {
             title: "Settings",
           }}
         />
+        <Stack.Screen name="sign-in" options={{ title: "Sign in" }} />
+        <Stack.Screen name="sign-up" options={{ title: "Create account" }} />
       </Stack>
       <StatusBar style={darkMode ? "light" : "dark"} />
     </>

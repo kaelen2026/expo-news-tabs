@@ -1,6 +1,7 @@
 import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { bearer } from "better-auth/plugins";
 import { account, getDb, session, user, verification } from "db";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -26,6 +27,7 @@ export const auth = betterAuth({
       ? { github: { clientId: githubClientId, clientSecret: githubClientSecret } }
       : {}),
   },
+  plugins: [bearer()],
 });
 
 export type Auth = typeof auth;

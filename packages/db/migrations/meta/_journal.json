@@ -8,6 +8,13 @@
       "when": 1779678591360,
       "tag": "0000_bizarre_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779684073185,
+      "tag": "0001_curvy_maximus",
+      "breakpoints": true
     }
   ]
 }
