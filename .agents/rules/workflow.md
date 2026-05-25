@@ -71,6 +71,57 @@ pnpm --filter mobile exec npx expo install --check
 - Keep branches short-lived. Rebase or merge from `main` often enough
   that conflicts stay small.
 
+## Worktrees
+
+Use `git worktree` when you need to work on more than one branch at once
+(parallel features, a hot-fix landed alongside in-progress work, an
+agent exploring an alternate approach) without thrashing your editor,
+dev servers, or pnpm install state.
+
+Create one alongside the main checkout:
+
+```sh
+# from the repo root
+git worktree add ../expo-example.feat-share-sheet -b feat/mobile-share-sheet
+cd ../expo-example.feat-share-sheet
+pnpm install
+git worktree list   # see active worktrees and their branches
+```
+
+Remove it when the branch lands or is abandoned:
+
+```sh
+git worktree remove ../expo-example.feat-share-sheet
+```
+
+Project-specific gotchas:
+
+- **`pnpm install` per worktree.** pnpm's content-addressed store is
+  shared on disk, but each worktree needs its own `node_modules`.
+- **Single Postgres.** `pnpm docker:up` binds host port `5432` and uses a
+  fixed container name (`expo-example-postgres`). Run it from one
+  worktree only; other worktrees point at the same `DATABASE_URL`.
+- **Dev server ports collide.** `apps/web` uses `3000`, `apps/api` uses
+  `3001`, Expo uses `8081`. Run a given app from one worktree at a time,
+  or override the port for the others
+  (e.g. `PORT=3100 pnpm --filter web dev`).
+- **`.env` files are gitignored and live per-app.** Copy them into each
+  new worktree — they do not follow the branch:
+
+  ```sh
+  cp ../expo-example/apps/api/.env       apps/api/.env
+  cp ../expo-example/apps/web/.env.local apps/web/.env.local
+  ```
+- **`.turbo` cache is per-worktree.** Remote cache (when configured)
+  bridges the gap; otherwise the first build in a new worktree is cold.
+
+Anti-patterns:
+
+- Running `pnpm docker:up` in two worktrees at once (container-name or
+  port collision — the second one fails).
+- Committing a `.env` to share it across worktrees. Copy or symlink
+  instead; `.env` stays gitignored.
+
 ## Commits
 
 - One intent per commit. Do not mix a bug fix with an unrelated
