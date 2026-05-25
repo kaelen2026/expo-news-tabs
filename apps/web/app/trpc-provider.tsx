@@ -14,7 +14,13 @@ export function TrpcProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   const [client] = useState(() =>
     trpc.createClient({
-      links: [httpBatchLink({ url: `${apiUrl}/trpc` })],
+      links: [
+        httpBatchLink({
+          url: `${apiUrl}/trpc`,
+          // Send the better-auth session cookie to the api on cross-port requests.
+          fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
+        }),
+      ],
     }),
   );
 
