@@ -6,9 +6,7 @@ const os = require("node:os");
 if (!process.env.REACT_NATIVE_PACKAGER_HOSTNAME) {
   const skip = (a) => /^(198\.1[89]\.|169\.254\.|100\.64\.)/.test(a);
   for (const addrs of Object.values(os.networkInterfaces() ?? {})) {
-    const ip = addrs?.find(
-      (a) => a.family === "IPv4" && !a.internal && !skip(a.address),
-    );
+    const ip = addrs?.find((a) => a.family === "IPv4" && !a.internal && !skip(a.address));
     if (ip) {
       process.env.REACT_NATIVE_PACKAGER_HOSTNAME = ip.address;
       break;
