@@ -1,13 +1,14 @@
 import { Image } from "expo-image";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { Ellipsis, Share2 } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { AsyncState } from "../../components/async-state";
 import { PhotoWallModal } from "../../components/photo-wall-modal";
 import { ShareSheet } from "../../components/share-sheet";
 import { useAppTheme } from "../../contexts/app-theme";
+import { useAuth } from "../../lib/auth";
 import { trpc } from "../../lib/trpc";
 
 function HeaderActions({ onShare, tintColor }: { onShare?: () => void; tintColor?: string }) {
@@ -40,12 +41,28 @@ function HeaderActions({ onShare, tintColor }: { onShare?: () => void; tintColor
 export default function StoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useAppTheme();
+  const { isAuthenticated } = useAuth();
   const [photoWallVisible, setPhotoWallVisible] = useState(false);
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
   const query = trpc.news.byId.useQuery({ id }, { enabled: Boolean(id), retry: false });
   const story = query.data;
   const notFound = query.isError && query.error?.data?.code === "NOT_FOUND";
+
+  // Auto-mark the story as read once it's loaded and the user is signed in.
+  // A ref tracks ids we've already requested so the effect can run on every
+  // render without re-firing the mutation.
+  const utils = trpc.useUtils();
+  const markRead = trpc.reads.mark.useMutation({
+    onSuccess: () => utils.reads.ids.invalidate(),
+  });
+  const markedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!story || !isAuthenticated) return;
+    if (markedRef.current.has(story.id)) return;
+    markedRef.current.add(story.id);
+    markRead.mutate({ storyId: story.id });
+  }, [story, isAuthenticated, markRead]);
 
   if (query.isLoading || query.isError) {
     return (

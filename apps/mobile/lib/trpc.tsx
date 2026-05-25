@@ -2,21 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import type { AppRouter } from "api";
-import Constants from "expo-constants";
 import { type ReactNode, useState } from "react";
+import { getCurrentAuthToken, resolveApiUrl } from "./auth";
 
 export const trpc = createTRPCReact<AppRouter>();
-
-function resolveApiUrl(): string {
-  const fromEnv = process.env.EXPO_PUBLIC_API_URL;
-  if (fromEnv) return fromEnv;
-
-  // Use the LAN host that Metro is serving from so simulators + devices both work.
-  const debuggerHost = Constants.expoConfig?.hostUri?.split(":")[0];
-  if (debuggerHost) return `http://${debuggerHost}:3001`;
-
-  return "http://localhost:3001";
-}
 
 export function TrpcProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -25,9 +14,10 @@ export function TrpcProvider({ children }: { children: ReactNode }) {
       links: [
         httpBatchLink({
           url: `${resolveApiUrl()}/trpc`,
-          // No browser cookies on native, but `credentials` is harmless and
-          // primes us to send Authorization headers in a follow-up PR.
-          fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
+          headers: () => {
+            const token = getCurrentAuthToken();
+            return token ? { Authorization: `Bearer ${token}` } : {};
+          },
         }),
       ],
     }),

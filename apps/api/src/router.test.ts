@@ -1,6 +1,16 @@
 import { TRPCError } from "@trpc/server";
-import { closeDb, getDb, newsStory, runMigrations } from "db";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  closeDb,
+  favorite,
+  getDb,
+  newsStory,
+  preference,
+  readState,
+  runMigrations,
+  user,
+} from "db";
+import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { appRouter } from "./router";
 import type { Context } from "./trpc";
 
@@ -166,5 +176,152 @@ describe("auth router", () => {
         emailVerified: true,
       });
     });
+  });
+});
+
+describe.skipIf(!TEST_URL)("user-data routers", () => {
+  const TEST_USER_ID = "user_test_data";
+
+  async function insertTestUser() {
+    const db = getDb();
+    await db
+      .insert(user)
+      .values({
+        id: TEST_USER_ID,
+        email: "test-data@example.com",
+        name: "Data Tester",
+        emailVerified: true,
+      })
+      .onConflictDoNothing();
+  }
+
+  async function insertSampleStories() {
+    const db = getDb();
+    await db
+      .insert(newsStory)
+      .values([
+        {
+          id: "data-a",
+          title: "A",
+          summary: "a",
+          body: ["a"],
+          category: "Test",
+          source: "Test",
+          publishedAt: "now",
+          readTime: "1m",
+          imageUrl: "x",
+          createdAt: new Date(),
+        },
+        {
+          id: "data-b",
+          title: "B",
+          summary: "b",
+          body: ["b"],
+          category: "Test",
+          source: "Test",
+          publishedAt: "now",
+          readTime: "1m",
+          imageUrl: "x",
+          createdAt: new Date(),
+        },
+      ])
+      .onConflictDoNothing();
+  }
+
+  const caller = appRouter.createCaller(
+    authedContext({ id: TEST_USER_ID, email: "test-data@example.com", name: "Data Tester" }),
+  );
+
+  beforeAll(async () => {
+    await runMigrations(getDb());
+    await insertSampleStories();
+    await insertTestUser();
+  });
+
+  beforeEach(async () => {
+    const db = getDb();
+    await db.delete(favorite).where(eq(favorite.userId, TEST_USER_ID));
+    await db.delete(readState).where(eq(readState.userId, TEST_USER_ID));
+    await db.delete(preference).where(eq(preference.userId, TEST_USER_ID));
+  });
+
+  describe("favorites", () => {
+    it("toggle adds then removes", async () => {
+      const first = await caller.favorites.toggle({ storyId: "data-a" });
+      expect(first.isFavorite).toBe(true);
+
+      const second = await caller.favorites.toggle({ storyId: "data-a" });
+      expect(second.isFavorite).toBe(false);
+    });
+
+    it("add is idempotent and list returns rows newest first", async () => {
+      await caller.favorites.add({ storyId: "data-a" });
+      await caller.favorites.add({ storyId: "data-a" });
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await caller.favorites.add({ storyId: "data-b" });
+
+      const list = await caller.favorites.list();
+      expect(list.map((r) => r.id)).toEqual(["data-b", "data-a"]);
+
+      const ids = await caller.favorites.ids();
+      expect([...ids].sort()).toEqual(["data-a", "data-b"]);
+    });
+
+    it("rejects favoriting a non-existent story", async () => {
+      await expect(caller.favorites.add({ storyId: "data-nope" })).rejects.toMatchObject({
+        code: "NOT_FOUND",
+      });
+    });
+  });
+
+  describe("reads", () => {
+    it("marking twice is idempotent and refreshes readAt", async () => {
+      const first = await caller.reads.mark({ storyId: "data-a" });
+      expect(first.isRead).toBe(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const second = await caller.reads.mark({ storyId: "data-a" });
+      expect(second.isRead).toBe(true);
+
+      const ids = await caller.reads.ids();
+      expect(ids).toEqual(["data-a"]);
+    });
+  });
+
+  describe("preferences", () => {
+    it("get returns nulls for a fresh user", async () => {
+      const prefs = await caller.preferences.get();
+      expect(prefs).toMatchObject({ theme: null, defaultCategory: null, fontSize: null });
+    });
+
+    it("update writes the provided fields and leaves others untouched", async () => {
+      await caller.preferences.update({ theme: "dark" });
+      let prefs = await caller.preferences.get();
+      expect(prefs.theme).toBe("dark");
+
+      await caller.preferences.update({ defaultCategory: "Science" });
+      prefs = await caller.preferences.get();
+      expect(prefs).toMatchObject({ theme: "dark", defaultCategory: "Science", fontSize: null });
+
+      await caller.preferences.update({ theme: null });
+      prefs = await caller.preferences.get();
+      expect(prefs).toMatchObject({ theme: null, defaultCategory: "Science" });
+    });
+  });
+});
+
+describe("user-data routers require auth", () => {
+  const caller = appRouter.createCaller(anonymousContext());
+
+  it("favorites.list rejects anonymous callers", async () => {
+    await expect(caller.favorites.list()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+  it("reads.mark rejects anonymous callers", async () => {
+    await expect(caller.reads.mark({ storyId: "x" })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+  it("preferences.get rejects anonymous callers", async () => {
+    await expect(caller.preferences.get()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 });

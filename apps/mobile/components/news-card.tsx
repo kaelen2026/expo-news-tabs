@@ -1,11 +1,22 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { Star } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 
 import { useAppTheme } from "../contexts/app-theme";
 import type { NewsStory } from "../lib/news-types";
 
-export function NewsCard({ story }: { story: NewsStory }) {
+export function NewsCard({
+  story,
+  isFavorite = false,
+  isRead = false,
+  onToggleFavorite,
+}: {
+  story: NewsStory;
+  isFavorite?: boolean;
+  isRead?: boolean;
+  onToggleFavorite?: () => void;
+}) {
   const { colors, darkMode } = useAppTheme();
   const router = useRouter();
 
@@ -23,7 +34,7 @@ export function NewsCard({ story }: { story: NewsStory }) {
         boxShadow: darkMode
           ? "0 10px 24px rgba(0, 0, 0, 0.28)"
           : "0 8px 22px rgba(15, 23, 42, 0.08)",
-        opacity: pressed ? 0.78 : 1,
+        opacity: pressed ? 0.78 : isRead ? 0.7 : 1,
         overflow: "hidden",
       })}
     >
@@ -41,7 +52,7 @@ export function NewsCard({ story }: { story: NewsStory }) {
         </View>
       </View>
       <View style={{ gap: 10, padding: 16 }}>
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+        <View style={{ alignItems: "center", flexDirection: "row", gap: 8 }}>
           <Text
             selectable
             style={{
@@ -57,6 +68,29 @@ export function NewsCard({ story }: { story: NewsStory }) {
           <Text selectable style={{ color: colors.mutedSoft, fontSize: 12 }}>
             {story.publishedAt}
           </Text>
+          {isRead && (
+            <Text style={{ color: colors.mutedSoft, fontSize: 11, fontWeight: "700" }}>· Read</Text>
+          )}
+          <View style={{ flex: 1 }} />
+          {onToggleFavorite && (
+            <Pressable
+              accessibilityLabel={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onToggleFavorite();
+              }}
+              style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1, padding: 2 })}
+            >
+              <Star
+                color={isFavorite ? colors.accent : colors.mutedSoft}
+                fill={isFavorite ? colors.accent : "transparent"}
+                size={20}
+                strokeWidth={2.2}
+              />
+            </Pressable>
+          )}
         </View>
         <Text
           selectable

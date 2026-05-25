@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 import { Bell, Monitor, Moon, Smartphone, Sun } from "lucide-react-native";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import {
@@ -12,6 +12,8 @@ import {
   Surface,
 } from "../components/ui-primitives";
 import { layoutTokens, type ThemeMode, useAppTheme } from "../contexts/app-theme";
+import { useAuth } from "../lib/auth";
+import { trpc } from "../lib/trpc";
 
 function SettingsRow({
   icon,
@@ -50,6 +52,33 @@ const themeOptions: { label: string; value: ThemeMode }[] = [
 
 export default function SettingsScreen() {
   const { colors, darkMode, setThemeMode, themeMode } = useAppTheme();
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+  const prefsQuery = trpc.preferences.get.useQuery(undefined, { enabled: isAuthenticated });
+  const updatePrefs = trpc.preferences.update.useMutation({
+    onSuccess: () => utils.preferences.get.invalidate(),
+  });
+
+  // Hydrate the local theme from server prefs once after sign-in.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    const serverTheme = prefsQuery.data?.theme as ThemeMode | null | undefined;
+    if (isAuthenticated && serverTheme && serverTheme !== themeMode) {
+      setThemeMode(serverTheme);
+    }
+    if (prefsQuery.isSuccess || !isAuthenticated) {
+      hydratedRef.current = true;
+    }
+  }, [prefsQuery.data?.theme, prefsQuery.isSuccess, isAuthenticated, themeMode, setThemeMode]);
+
+  const handleThemeChange = (next: ThemeMode) => {
+    setThemeMode(next);
+    if (isAuthenticated) {
+      updatePrefs.mutate({ theme: next });
+    }
+  };
+
   const appearanceDescription =
     themeMode === "system"
       ? `Following system appearance (${darkMode ? "dark" : "light"})`
@@ -80,7 +109,12 @@ export default function SettingsScreen() {
           title="Appearance"
           description={appearanceDescription}
         />
-        <SegmentedControl options={themeOptions} value={themeMode} onChange={setThemeMode} />
+        <SegmentedControl options={themeOptions} value={themeMode} onChange={handleThemeChange} />
+        {isAuthenticated ? (
+          <Text style={{ color: colors.mutedSoft, fontSize: 12, marginTop: 6 }}>
+            Synced to your account
+          </Text>
+        ) : null}
       </Surface>
 
       <Surface>

@@ -1,13 +1,19 @@
+import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import { ActivityIndicator, FlatList, RefreshControl, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
 import { AsyncState } from "../../components/async-state";
 import { NewsCard } from "../../components/news-card";
 import { useAppTheme } from "../../contexts/app-theme";
+import { useAuth } from "../../lib/auth";
 import { trpc } from "../../lib/trpc";
+import { useUserStoryData } from "../../lib/user-data";
 
 export default function HomeScreen() {
   const { colors } = useAppTheme();
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
+  const { favoriteSet, readSet, toggleFavorite } = useUserStoryData();
 
   const query = trpc.news.list.useInfiniteQuery(
     { limit: 6 },
@@ -39,22 +45,46 @@ export default function HomeScreen() {
 
   const Header = (
     <View style={{ gap: 8, paddingBottom: 4 }}>
-      <Text selectable style={{ color: colors.accent, fontSize: 13, fontWeight: "700" }}>
-        Morning Brief
-      </Text>
-      <Text
-        selectable
-        style={{ color: colors.text, fontSize: 32, fontWeight: "900", lineHeight: 38 }}
+      <View
+        style={{ alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }}
       >
-        Top stories for today
-      </Text>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text selectable style={{ color: colors.accent, fontSize: 13, fontWeight: "700" }}>
+            Morning Brief
+          </Text>
+          <Text
+            selectable
+            style={{ color: colors.text, fontSize: 32, fontWeight: "900", lineHeight: 38 }}
+          >
+            Top stories for today
+          </Text>
+        </View>
+        {isAuthenticated ? (
+          <Text style={{ color: colors.mutedSoft, fontSize: 12, marginTop: 4 }}>{user?.email}</Text>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/sign-in")}
+            style={({ pressed }) => ({
+              backgroundColor: colors.accent,
+              borderRadius: 999,
+              opacity: pressed ? 0.7 : 1,
+              paddingHorizontal: 14,
+              paddingVertical: 7,
+            })}
+          >
+            <Text style={{ color: colors.background, fontSize: 13, fontWeight: "800" }}>
+              Sign in
+            </Text>
+          </Pressable>
+        )}
+      </View>
       <Text selectable style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
         A focused feed of local, science, business, and culture updates.
       </Text>
     </View>
   );
 
-  // While the very first page is loading, show the unified async state.
   if (query.isLoading || (query.isError && stories.length === 0)) {
     return (
       <View style={{ backgroundColor: colors.background, flex: 1, padding: 16 }}>
@@ -78,7 +108,14 @@ export default function HomeScreen() {
       contentInsetAdjustmentBehavior="automatic"
       data={stories}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => <NewsCard story={item} />}
+      renderItem={({ item }) => (
+        <NewsCard
+          story={item}
+          isFavorite={favoriteSet.has(item.id)}
+          isRead={readSet.has(item.id)}
+          onToggleFavorite={isAuthenticated ? () => toggleFavorite(item.id) : undefined}
+        />
+      )}
       refreshControl={refreshControl}
       onEndReached={handleEndReached}
       onEndReachedThreshold={0.4}

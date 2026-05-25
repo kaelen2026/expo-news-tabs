@@ -1,6 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { DEFAULT_PAGE_LIMIT, getStoryById, listStories, MAX_PAGE_LIMIT } from "./news";
+import { favoritesRouter } from "./routers/favorites";
+import { preferencesRouter } from "./routers/preferences";
+import { readsRouter } from "./routers/reads";
 import { protectedProcedure, publicProcedure, router } from "./trpc";
 
 export const appRouter = router({
@@ -15,6 +18,10 @@ export const appRouter = router({
       };
     }),
   }),
+
+  favorites: favoritesRouter,
+  reads: readsRouter,
+  preferences: preferencesRouter,
 
   news: router({
     list: publicProcedure

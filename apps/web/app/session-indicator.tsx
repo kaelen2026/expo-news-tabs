@@ -26,18 +26,26 @@ export function SessionIndicator() {
   }
 
   return (
-    <div className="flex items-center gap-3 text-sm">
+    <div className="flex flex-col items-end gap-1 text-sm">
       <span className="opacity-70">Signed in as {data.user.email}</span>
-      <button
-        type="button"
-        className="underline"
-        onClick={async () => {
-          await authClient.signOut();
-          router.refresh();
-        }}
-      >
-        Sign out
-      </button>
+      <div className="flex items-center gap-3">
+        <Link href="/favorites" className="underline">
+          Favorites
+        </Link>
+        <Link href="/preferences" className="underline">
+          Preferences
+        </Link>
+        <button
+          type="button"
+          className="underline"
+          onClick={async () => {
+            await authClient.signOut();
+            router.refresh();
+          }}
+        >
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }
