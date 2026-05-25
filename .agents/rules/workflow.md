@@ -7,7 +7,7 @@ Run each app's dev server with a pnpm filter:
 ```sh
 pnpm --filter api dev      # Hono + tRPC on http://localhost:3001
 pnpm --filter web dev      # Next.js on http://localhost:3000
-pnpm --filter mobile dev   # Expo dev server (QR code for Expo Go)
+pnpm --filter mobile dev   # Metro dev server (loads in the custom dev client)
 ```
 
 For mobile platform-specific checks:
