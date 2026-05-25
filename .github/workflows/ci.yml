@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel earlier runs on the same branch when a newer commit arrives.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck, lint, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `packageManager` in package.json pins pnpm; pin Node from `engines`.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Three checks, each as its own step so the failing one is obvious
+      # from the Actions summary. Turbo caches downstream of the same job
+      # via the per-task pipeline.
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
