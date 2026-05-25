@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getStoryById, listStories } from "./news";
+import { DEFAULT_PAGE_LIMIT, getStoryById, listStories, MAX_PAGE_LIMIT } from "./news";
 import { publicProcedure, router } from "./trpc";
 
 export const appRouter = router({
@@ -9,21 +9,13 @@ export const appRouter = router({
       .input(
         z
           .object({
-            page: z.number().int().min(1).max(3).default(1),
+            cursor: z.string().optional(),
+            limit: z.number().int().min(1).max(MAX_PAGE_LIMIT).default(DEFAULT_PAGE_LIMIT),
           })
           .optional(),
       )
       .query(async ({ input }) => {
-        const page = input?.page ?? 1;
-        const stories = await listStories();
-        return {
-          page,
-          hasMore: page < 3,
-          stories: stories.map((story) => ({
-            ...story,
-            feedId: `${page}-${story.id}`,
-          })),
-        };
+        return listStories({ cursor: input?.cursor, limit: input?.limit });
       }),
 
     byId: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {

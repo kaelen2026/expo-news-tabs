@@ -1,122 +1,116 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, View } from "react-native";
 
+import { AsyncState } from "../../components/async-state";
 import { NewsCard } from "../../components/news-card";
 import { useAppTheme } from "../../contexts/app-theme";
-import { type NewsStory, newsStories } from "../../data/news";
-
-type FeedItem = {
-  feedId: string;
-  story: NewsStory;
-};
-
-const MAX_MOCK_PAGES = 3;
-
-function createFeedPage(page: number): FeedItem[] {
-  return newsStories.map((story) => ({
-    feedId: `${page}-${story.id}`,
-    story,
-  }));
-}
+import { trpc } from "../../lib/trpc";
 
 export default function HomeScreen() {
   const { colors } = useAppTheme();
-  const [, setPage] = useState(1);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [feedItems, setFeedItems] = useState<FeedItem[]>(() => createFeedPage(1));
+
+  const query = trpc.news.list.useInfiniteQuery(
+    { limit: 6 },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
+  );
+
+  const stories = useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data],
+  );
 
   const refreshControl = useMemo(
     () => (
       <RefreshControl
-        refreshing={refreshing}
+        refreshing={query.isRefetching && !query.isFetchingNextPage}
         tintColor={colors.accent}
         colors={[colors.accent]}
-        onRefresh={() => {
-          setRefreshing(true);
-          setTimeout(() => {
-            setPage(1);
-            setFeedItems(createFeedPage(1));
-            setHasMore(true);
-            setRefreshing(false);
-          }, 650);
-        }}
+        onRefresh={() => query.refetch()}
       />
     ),
-    [colors.accent, refreshing],
+    [colors.accent, query.isRefetching, query.isFetchingNextPage, query.refetch],
   );
 
   const handleEndReached = useCallback(() => {
-    if (loadingMore || refreshing || !hasMore) {
-      return;
+    if (query.hasNextPage && !query.isFetchingNextPage) {
+      query.fetchNextPage();
     }
+  }, [query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage]);
 
-    setLoadingMore(true);
-    setTimeout(() => {
-      setPage((currentPage) => {
-        if (currentPage >= MAX_MOCK_PAGES) {
-          setHasMore(false);
-          return currentPage;
-        }
+  const Header = (
+    <View style={{ gap: 8, paddingBottom: 4 }}>
+      <Text selectable style={{ color: colors.accent, fontSize: 13, fontWeight: "700" }}>
+        Morning Brief
+      </Text>
+      <Text
+        selectable
+        style={{ color: colors.text, fontSize: 32, fontWeight: "900", lineHeight: 38 }}
+      >
+        Top stories for today
+      </Text>
+      <Text selectable style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
+        A focused feed of local, science, business, and culture updates.
+      </Text>
+    </View>
+  );
 
-        const nextPage = currentPage + 1;
-        setFeedItems((currentItems) => [...currentItems, ...createFeedPage(nextPage)]);
-        setHasMore(nextPage < MAX_MOCK_PAGES);
-        return nextPage;
-      });
-      setLoadingMore(false);
-    }, 650);
-  }, [hasMore, loadingMore, refreshing]);
+  // While the very first page is loading, show the unified async state.
+  if (query.isLoading || (query.isError && stories.length === 0)) {
+    return (
+      <View style={{ backgroundColor: colors.background, flex: 1, padding: 16 }}>
+        {Header}
+        <AsyncState
+          isLoading={query.isLoading}
+          isError={query.isError}
+          errorMessage={query.error?.message}
+          isEmpty={false}
+          loadingLabel="Loading stories…"
+          onRetry={() => query.refetch()}
+        >
+          {null}
+        </AsyncState>
+      </View>
+    );
+  }
 
   return (
     <FlatList
       contentInsetAdjustmentBehavior="automatic"
-      data={feedItems}
-      keyExtractor={(item) => item.feedId}
-      renderItem={({ item }) => <NewsCard story={item.story} />}
+      data={stories}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => <NewsCard story={item} />}
       refreshControl={refreshControl}
       onEndReached={handleEndReached}
-      onEndReachedThreshold={0.35}
-      onScroll={({ nativeEvent }) => {
-        const distanceFromBottom =
-          nativeEvent.contentSize.height -
-          nativeEvent.layoutMeasurement.height -
-          nativeEvent.contentOffset.y;
-
-        if (distanceFromBottom < 180) {
-          handleEndReached();
-        }
-      }}
-      scrollEventThrottle={120}
-      ListHeaderComponent={
-        <View style={{ gap: 8, paddingBottom: 4 }}>
-          <Text selectable style={{ color: colors.accent, fontSize: 13, fontWeight: "700" }}>
-            Morning Brief
-          </Text>
-          <Text
-            selectable
-            style={{ color: colors.text, fontSize: 32, fontWeight: "900", lineHeight: 38 }}
-          >
-            Top stories for today
-          </Text>
-          <Text selectable style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
-            A focused feed of local, science, business, and culture updates.
-          </Text>
-        </View>
+      onEndReachedThreshold={0.4}
+      ListHeaderComponent={Header}
+      ListEmptyComponent={
+        <AsyncState
+          isLoading={false}
+          isError={false}
+          isEmpty
+          emptyLabel="No stories yet — check back soon."
+        >
+          {null}
+        </AsyncState>
       }
       ListFooterComponent={
         <View style={{ alignItems: "center", minHeight: 44, paddingVertical: 8 }}>
-          {loadingMore ? <ActivityIndicator color={colors.accent} /> : null}
-          {!loadingMore && !hasMore ? (
+          {query.isFetchingNextPage ? <ActivityIndicator color={colors.accent} /> : null}
+          {!query.isFetchingNextPage && !query.hasNextPage && stories.length > 0 ? (
             <Text selectable style={{ color: colors.mutedSoft, fontSize: 13, fontWeight: "700" }}>
               No more stories to load
+            </Text>
+          ) : null}
+          {query.isError && stories.length > 0 ? (
+            <Text selectable style={{ color: colors.muted, fontSize: 13 }}>
+              Couldn't load more — pull down to retry.
             </Text>
           ) : null}
         </View>
       }
       contentContainerStyle={{
         backgroundColor: colors.background,
+        flexGrow: 1,
         gap: 16,
         padding: 16,
         paddingBottom: 28,
