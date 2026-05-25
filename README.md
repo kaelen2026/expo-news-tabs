@@ -229,6 +229,46 @@ After dependency changes in `apps/mobile` also run:
 pnpm --filter mobile exec npx expo install --check
 ```
 
+## Deploying `apps/web` to Vercel
+
+`apps/web` is set up for Vercel's native PR preview workflow — every push
+to a PR branch produces a unique preview URL; merging the PR makes that
+preview inactive (the URL is preserved for audit, not deleted, which is
+Vercel's default and not configurable per project).
+
+`apps/web/vercel.json` pins the build:
+- `installCommand` filters to `web...` so `apps/mobile`'s Expo deps don't
+  install on every Vercel build.
+- `buildCommand` runs `turbo build --filter=web` from the repo root.
+- `ignoreCommand` short-circuits the build for PRs that don't touch
+  `apps/web` or its workspace deps.
+
+### One-time Vercel project setup
+
+1. Create a new Vercel project, import this repo.
+2. Set **Root Directory** to `apps/web`. Framework auto-detects as
+   Next.js.
+3. Add the following environment variables for **Production**,
+   **Preview**, and **Development** scopes:
+
+   | Variable                       | Value                                                |
+   | ------------------------------ | ---------------------------------------------------- |
+   | `DATABASE_URL`                 | Supabase Pooler URL (transaction mode, port 6543)   |
+   | `BETTER_AUTH_SECRET`           | `openssl rand -base64 32` — MUST match `apps/api`   |
+   | `NEXT_PUBLIC_API_URL`          | Cloudflare Worker URL for `apps/api`                |
+   | `BETTER_AUTH_URL`              | Production scope only — pin to your custom domain   |
+   | `NEXT_PUBLIC_BETTER_AUTH_URL`  | Production scope only — same as above               |
+   | `GOOGLE_CLIENT_ID/SECRET`      | Optional, OAuth provider                            |
+   | `GITHUB_CLIENT_ID/SECRET`      | Optional, OAuth provider                            |
+
+   Leave the two `BETTER_AUTH_URL` vars **unset on Preview** — `lib/auth.ts`
+   and `lib/auth-client.ts` fall back to `VERCEL_URL` (server) and
+   `window.location.origin` (client) so per-PR previews auth against their
+   own hostname.
+
+4. First push to `main` after connecting triggers the production
+   deployment; future PRs get preview URLs commented on the PR.
+
 ## tRPC Contract
 
 `apps/api/src/app.router.ts` composes the per-module routers. Key procedures:
