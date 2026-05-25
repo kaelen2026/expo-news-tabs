@@ -1,18 +1,47 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { AsyncState } from "./async-state";
+import { isKnownCategory, KNOWN_CATEGORIES, type KnownCategory } from "./categories";
 import { SessionIndicator } from "./session-indicator";
 import { StoryActions } from "./story-actions";
 import { trpc } from "./trpc-provider";
+
+const PAGE_LIMIT_DEFAULT = 6;
+// Mirrors the mobile home tab: filtering happens client-side, so a 6-row
+// page often nets 0–1 items in the chosen category. A bigger page while
+// filtered keeps the list from feeling empty without changing the API.
+const PAGE_LIMIT_FILTERED = 24;
 
 export default function HomePage() {
   const session = useSession();
   const isAuthenticated = Boolean(session.data?.user);
 
+  const [selectedCategory, setSelectedCategory] = useState<KnownCategory | null>(null);
+
+  // Hydrate the chip once from preferences.defaultCategory. Subsequent
+  // chip clicks are local to this page; updating the saved default still
+  // lives on /preferences.
+  const prefsQuery = trpc.preferences.get.useQuery(undefined, { enabled: isAuthenticated });
+  const [hydratedFromPrefs, setHydratedFromPrefs] = useState(false);
+  useEffect(() => {
+    if (hydratedFromPrefs) return;
+    if (!isAuthenticated) {
+      setHydratedFromPrefs(true);
+      return;
+    }
+    if (prefsQuery.isSuccess) {
+      const def = prefsQuery.data?.defaultCategory;
+      if (isKnownCategory(def)) {
+        setSelectedCategory(def);
+      }
+      setHydratedFromPrefs(true);
+    }
+  }, [hydratedFromPrefs, isAuthenticated, prefsQuery.isSuccess, prefsQuery.data]);
+
   const newsQuery = trpc.news.list.useInfiniteQuery(
-    { limit: 6 },
+    { limit: selectedCategory ? PAGE_LIMIT_FILTERED : PAGE_LIMIT_DEFAULT },
     { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
   );
 
@@ -22,9 +51,14 @@ export default function HomePage() {
   const favoriteSet = useMemo(() => new Set(favoritesQuery.data ?? []), [favoritesQuery.data]);
   const readSet = useMemo(() => new Set(readsQuery.data ?? []), [readsQuery.data]);
 
-  const stories = useMemo(
+  const allStories = useMemo(
     () => newsQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [newsQuery.data],
+  );
+  const stories = useMemo(
+    () =>
+      selectedCategory ? allStories.filter((s) => s.category === selectedCategory) : allStories,
+    [allStories, selectedCategory],
   );
 
   return (
@@ -42,6 +76,7 @@ export default function HomePage() {
         <p className="mt-3 text-base opacity-70">
           Next.js 16 · App Router · Tailwind v4 · tRPC client talking to the Hono API.
         </p>
+        <CategoryChips selected={selectedCategory} onSelect={setSelectedCategory} />
       </header>
 
       <AsyncState
@@ -50,7 +85,11 @@ export default function HomePage() {
         errorMessage={newsQuery.error?.message}
         isEmpty={newsQuery.isSuccess && stories.length === 0}
         loadingLabel="Loading stories…"
-        emptyLabel="No stories yet — check back soon."
+        emptyLabel={
+          selectedCategory
+            ? `No ${selectedCategory.toLowerCase()} stories yet — try another topic.`
+            : "No stories yet — check back soon."
+        }
         onRetry={() => newsQuery.refetch()}
       >
         <ul className="space-y-6">
@@ -102,5 +141,45 @@ export default function HomePage() {
         </div>
       </AsyncState>
     </main>
+  );
+}
+
+function CategoryChips({
+  selected,
+  onSelect,
+}: {
+  selected: KnownCategory | null;
+  onSelect: (next: KnownCategory | null) => void;
+}) {
+  const items: { label: string; value: KnownCategory | null }[] = [
+    { label: "All", value: null },
+    ...KNOWN_CATEGORIES.map((c) => ({ label: c, value: c })),
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="Filter stories by category"
+      className="mt-4 flex flex-wrap gap-2"
+    >
+      {items.map((item) => {
+        const active = selected === item.value;
+        return (
+          <button
+            key={item.label}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onSelect(item.value)}
+            className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+              active
+                ? "border-black/40 bg-black/5 dark:border-white/40 dark:bg-white/10"
+                : "border-black/15 hover:bg-black/[0.03] dark:border-white/15 dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
