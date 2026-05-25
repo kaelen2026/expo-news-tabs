@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "newstabs",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
