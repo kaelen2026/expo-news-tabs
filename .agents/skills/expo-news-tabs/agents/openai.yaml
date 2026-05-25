@@ -1,0 +1,6 @@
+interface:
+  display_name: "Expo News Tabs"
+  short_description: "Repo-specific patterns and workflows for expo-news-tabs"
+  default_prompt: "Use the expo-news-tabs repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
