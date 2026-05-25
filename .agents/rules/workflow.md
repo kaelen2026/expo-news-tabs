@@ -129,12 +129,20 @@ Anti-patterns:
 - One workspace per commit when practical. A cross-workspace API +
   client change is fine in a single commit; a drive-by mobile refactor
   bundled into a web change is not.
-- Subject line: imperative mood, no trailing period, ≤ 70 characters
-  (e.g. "Add share sheet web fallback", not "added share sheet" or
-  "share sheet stuff").
+- Subject line follows **Conventional Commits**: `type(scope)?: description`.
+  Types accepted: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`,
+  `refactor`, `perf`, `test`, `revert`. Scope is optional but useful to
+  signal the workspace (`feat(mobile): ...`, `fix(api): ...`). Description
+  is imperative mood, lowercase first letter, no trailing period.
+  Examples: `feat(mobile): add share sheet web fallback`,
+  `fix(api): handle missing news id`, `chore: bump turbo to 2.4`.
 - Body (when needed): explain **why**, not what. The diff already shows
   what changed; the body should capture the motivation, the constraint,
-  or the decision behind the change.
+  or the decision behind the change. Separate from the subject with a
+  blank line.
+- The `commit-msg` Husky hook runs `commitlint` against the standard
+  Conventional Commits ruleset. The `pre-commit` hook runs the full
+  quality gate (`pnpm typecheck && pnpm lint && pnpm test`).
 - Prefer creating a new commit over `--amend`. Never amend a commit that
   has already been pushed.
 - Never bypass hooks (`--no-verify`) or signing. If a pre-commit hook

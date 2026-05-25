@@ -17,10 +17,14 @@
     "db:migrate": "pnpm --filter db migrate",
     "db:push": "pnpm --filter db push",
     "db:seed": "pnpm --filter db seed",
-    "db:studio": "pnpm --filter db studio"
+    "db:studio": "pnpm --filter db studio",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
+    "husky": "^9.1.7",
     "turbo": "^2.3.3",
     "typescript": "~6.0.3"
   },
