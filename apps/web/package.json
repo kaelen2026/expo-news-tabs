@@ -15,6 +15,7 @@
     "@trpc/react-query": "^11.0.0-rc.682",
     "@trpc/server": "^11.0.0-rc.682",
     "api": "workspace:*",
+    "auth-config": "workspace:*",
     "better-auth": "^1.6.11",
     "db": "workspace:*",
     "drizzle-orm": "^0.39.3",
