@@ -1,151 +1,124 @@
-# News Tabs
+# News Tabs (Monorepo)
 
-A small Expo Router news-reading app for iOS, Android, and Web. The codebase is
-intentionally compact — it's a reference for a themed, multi-tab, multi-screen
-Expo app built with the React Native New Architecture.
+Turborepo workspace with three apps:
 
-## Feature Tour
+- **`apps/mobile`** — the original Expo Router app (iOS / Android / Web via
+  Metro). React 19, React Native 0.85, New Architecture.
+- **`apps/web`** — a Next.js 16 App Router landing page with Tailwind CSS v4,
+  consuming the API via tRPC.
+- **`apps/api`** — a Hono server exposing a tRPC router that serves the news
+  data shared between web and mobile.
 
-- **Home (`Morning Brief`)** — a paginated feed of mock stories with
-  pull-to-refresh and incremental load-more (capped at 3 mock pages).
-- **Story detail** — full-bleed hero image (tap to open a full-screen
-  photo wall), category/source/read-time meta, body paragraphs, and a share
-  sheet with system share + copy-link fallback (web `navigator.share`,
-  native `Share`, clipboard otherwise).
-- **Profile** — avatar with picker modal (preset avatars + device library
-  via `expo-image-picker`), reading stats, favorite topics, and a shortcut
-  into Settings.
-- **Settings** — appearance segmented control (System / Light / Dark) plus
-  placeholder rows for notifications and reading layout.
-- **Theme** — Light/Dark/System modes driven by `useColorScheme`, with
-  shared color and layout tokens in `contexts/app-theme.tsx`.
+Type safety is end-to-end: `apps/api` exports the `AppRouter` type, and both
+`apps/web` and `apps/mobile` depend on it as a workspace package (`"api":
+"workspace:*"`) for fully-typed tRPC clients.
 
 ## Stack
 
-| Area            | Choice                                             |
-| --------------- | -------------------------------------------------- |
-| Runtime         | Expo SDK 56, React 19, React Native 0.85, New Arch |
-| Navigation      | `expo-router` (Stack + Tabs, typed routes on)      |
-| Images / Icons  | `expo-image`, `lucide-react-native`                |
-| Platform extras | `expo-clipboard`, `expo-image-picker`, `expo-linking` |
-| Lint / Format   | Biome 2 (`biome check`, `biome format`)            |
-| Tests           | Vitest (Node environment, `*.test.ts`)             |
-| Language        | TypeScript 6, `strict` enabled                     |
+| Workspace     | Tech                                                       |
+| ------------- | ---------------------------------------------------------- |
+| Monorepo      | pnpm workspaces + Turborepo                                |
+| `apps/api`    | Hono 4, tRPC 11, Zod, `@hono/node-server`                  |
+| `apps/web`    | Next.js 16, App Router, Tailwind CSS v4, React 19          |
+| `apps/mobile` | Expo SDK 56, expo-router, React Native 0.85, New Arch      |
+| Lint / Format | Biome 2 (single root config)                               |
+| Tests         | Vitest                                                     |
+| Language      | TypeScript 6, `strict` enabled, shared `tsconfig.base.json`|
 
-## Project Layout
+## Layout
 
-```bash
-app/                       Expo Router routes ONLY
-  _layout.tsx              Root Stack + AppThemeProvider + StatusBar
-  (tabs)/_layout.tsx       Tabs: Home + Profile (Settings button in header)
-  (tabs)/index.tsx         Home feed (FlatList + pagination)
-  (tabs)/profile.tsx       Profile + avatar picker
-  news/[id].tsx            Story detail + photo wall + share sheet
-  settings.tsx             Appearance + placeholder preferences
-components/                Reusable UI
-  news-card.tsx            Story card
-  ui-primitives.tsx        ScreenScroll, PageIntro, Surface, IconFrame,
-                           Divider, SegmentedControl
-  avatar-picker-modal.tsx  Avatar picker (presets + device library)
-  photo-wall-modal.tsx     Full-screen photo wall with thumbnails
-  share-sheet.tsx          Share / copy-link bottom sheet
-contexts/
-  app-theme.tsx            Theme context, color + layoutTokens, ThemeMode
-data/
-  news.ts                  Mock NewsStory list + getStoryById
-  news.test.ts             Vitest coverage for the data helpers
-.agents/                   Project rules, skills, and review sub-agent
 ```
-
-Module boundaries follow the rules in `.agents/rules/typescript.md`:
-routes in `app/`, reusable UI in `components/`, shared state in
-`contexts/`, pure data and helpers in `data/`. Reusable code does not
-live inside `app/`.
+apps/
+  api/
+    src/
+      server.ts      Hono entry: CORS + logger + mounted tRPC at /trpc
+      router.ts      tRPC router with news.list / news.byId; exports AppRouter
+      trpc.ts        initTRPC factory
+      news.ts        Mock news data + getStoryById
+  web/
+    app/
+      layout.tsx        Root layout, wraps in TrpcProvider
+      page.tsx          Landing page; renders trpc.news.list result
+      trpc-provider.tsx Client-side tRPC + React Query provider
+      globals.css       Tailwind v4 (@import "tailwindcss") + @theme tokens
+    next.config.ts
+    postcss.config.mjs
+  mobile/
+    app/                Expo Router routes (Stack + Tabs)
+    components/         Reusable UI primitives
+    contexts/           Theme context
+    data/               Local mock data + tests
+    lib/trpc.tsx        tRPC + React Query provider (resolves API URL via Expo hostUri)
+    metro.config.js     Monorepo-aware Metro config (watchFolders + nodeModulesPaths)
+.agents/              Project rules, skills, and review sub-agent (mobile-focused)
+biome.json            Single Biome config for all workspaces
+turbo.json
+pnpm-workspace.yaml
+tsconfig.base.json
+```
 
 ## Quick Start
 
-Prerequisites: Node 24+, npm, and either the Expo Go app or a local
-iOS/Android simulator.
+Prerequisites: Node 24+, pnpm 9+ (`corepack enable pnpm` works).
 
 ```sh
-npm install
-npm start            # Expo dev server (QR code for Expo Go)
-npm run ios          # iOS simulator
-npm run android      # Android emulator
-npm run web          # Browser (Metro web bundler)
+pnpm install
 ```
 
-App identity is configured in `app.json`:
+Run an app:
 
-- name: `News Tabs`
-- slug: `expo-news-tabs`
-- scheme: `newstabs://`
-- android.package: `com.jialin2023.exponewstabs`
+```sh
+pnpm --filter api dev      # http://localhost:3001
+pnpm --filter web dev      # http://localhost:3000
+pnpm --filter mobile dev   # Expo dev server (QR code)
+```
+
+To use the live API from the mobile app on a device, set
+`EXPO_PUBLIC_API_URL=http://<your-lan-ip>:3001` before `expo start`, or let
+`lib/trpc.tsx` derive it from Metro's `hostUri`. From a web browser pointed at
+`apps/web`, set `NEXT_PUBLIC_API_URL` if the API isn't on `localhost:3001`.
 
 ## Quality Checks
 
-Run before declaring a change done (also enforced by `.agents/rules/quality.md`):
-
 ```sh
-npm run typecheck    # tsc --noEmit
-npm run lint         # biome check .
-npm test             # vitest run
+pnpm typecheck   # turbo run typecheck across all workspaces
+pnpm lint        # biome check . (root)
+pnpm test        # turbo run test (mobile data tests; web/api pass with no tests)
+pnpm format      # biome format --write .
 ```
 
-Optional formatting:
+After dependency changes in `apps/mobile` also run:
 
 ```sh
-npm run format       # biome format --write .
+pnpm --filter mobile exec npx expo install --check
 ```
 
-After dependency changes also run:
+## tRPC Contract
 
-```sh
-npx expo install --check
+`apps/api/src/router.ts` defines the contract:
+
+```ts
+news.list   ({ page?: 1 | 2 | 3 })  →  { page, hasMore, stories: NewsStory[] }
+news.byId   ({ id: string })        →  NewsStory   (404 → TRPCError NOT_FOUND)
 ```
 
-## Theme System
+Both clients consume it the same way:
 
-The single source of truth for colors and spacing is
-`contexts/app-theme.tsx`:
+```ts
+import type { AppRouter } from "api";
+import { createTRPCReact } from "@trpc/react-query";
 
-- `lightColors` / `darkColors` — semantic color roles
-  (`background`, `card`, `accent`, `accentSoft`, `text`, `muted`,
-  `mutedSoft`, `border`, `tagBorder`, `tagText`, `imagePlaceholder`).
-- `layoutTokens` — `space.*`, `radius.*`, `size.iconFrame`,
-  `borderWidth.hairline`.
-- `ThemeMode = "system" | "light" | "dark"` — `system` follows
-  `useColorScheme()`.
-
-UI code reads everything through `useAppTheme()`; components do not
-call `useColorScheme()` directly. New design decisions should add
-tokens here rather than inline literals — see
-`.agents/rules/style-system.md`.
-
-## Data
-
-The app is currently UI-only and runs on mocked data in `data/news.ts`.
-`NewsStory` is the contract for cards, detail screens, the photo wall,
-and the share sheet. The home feed simulates pagination by emitting
-copies of the same list with prefixed `feedId`s (max 3 pages), and
-mock latency is added to refresh/load-more for visible UI states.
-
-Swapping in a real API means:
-
-1. Keeping the `NewsStory` shape (or adapting it at the boundary).
-2. Replacing `newsStories` / `getStoryById` with async fetchers and
-   wiring loading/error states in `app/(tabs)/index.tsx` and
-   `app/news/[id].tsx`.
+export const trpc = createTRPCReact<AppRouter>();
+// ...
+trpc.news.list.useQuery({ page: 1 });
+```
 
 ## Agents and Contributor Rules
 
-- `AGENTS.md` is the entry point for agents and contributors.
-- Detailed rules live in `.agents/rules/`
-  (`style-system`, `expo-router`, `typescript`, `quality`, `workflow`).
+- [`AGENTS.md`](./AGENTS.md) is the entry point for agents and contributors.
+- Detailed rules live in `.agents/rules/` (currently mobile-focused).
 - A read-only review sub-agent lives in `.agents/agents/reviewer.md`.
 - Project-local skills: `.agents/skills/deploy/SKILL.md` (local
-  Gradle / xcodebuild builds) and
-  `.agents/skills/code-review/SKILL.md`.
+  Gradle / xcodebuild builds) and `.agents/skills/code-review/SKILL.md`.
 
-Read `AGENTS.md` first if you plan to make changes — the project rules
-there govern code style, navigation, types, and required checks.
+Read `AGENTS.md` first if you plan to make changes.

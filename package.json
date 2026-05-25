@@ -1,43 +1,22 @@
 {
-  "name": "expo-news-tabs",
+  "name": "expo-news-tabs-monorepo",
   "version": "1.0.0",
   "private": true,
-  "main": "expo-router/entry",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "typecheck": "tsc --noEmit",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "@expo/metro-runtime": "*",
-    "expo": "~56.0.3",
-    "expo-clipboard": "~56.0.3",
-    "expo-constants": "*",
-    "expo-image": "*",
-    "expo-image-picker": "~56.0.12",
-    "expo-linking": "*",
-    "expo-router": "~56.2.5",
-    "expo-status-bar": "*",
-    "lucide-react-native": "^1.16.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.85.3",
-    "react-native-gesture-handler": "*",
-    "react-native-reanimated": "*",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "4.25.1",
-    "react-native-svg": "15.15.4",
-    "react-native-web": "*"
+    "test": "turbo run test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
-    "@types/react": "~19.2.14",
-    "typescript": "~6.0.3",
-    "vitest": "^4.1.7"
+    "turbo": "^2.3.3",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

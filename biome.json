@@ -3,12 +3,19 @@
   "files": {
     "includes": [
       "**",
-      "!android",
-      "!ios",
-      "!node_modules",
-      "!.expo",
-      "!package-lock.json",
-      "!expo-env.d.ts"
+      "!**/node_modules",
+      "!**/.expo",
+      "!**/.next",
+      "!**/.turbo",
+      "!**/dist",
+      "!**/build",
+      "!apps/mobile/android",
+      "!apps/mobile/ios",
+      "!**/expo-env.d.ts",
+      "!**/next-env.d.ts",
+      "!apps/web/app/globals.css",
+      "!**/pnpm-lock.yaml",
+      "!**/package-lock.json"
     ]
   },
   "formatter": {

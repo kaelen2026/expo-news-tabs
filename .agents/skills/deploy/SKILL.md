@@ -1,11 +1,13 @@
 ---
 name: deploy
-description: Use this skill when building this Expo app locally into Android APK files or iOS IPA files, including checking native toolchains, generating native projects with Expo prebuild, signing, and locating build artifacts. Prefer local Gradle and xcodebuild workflows; use EAS local only when explicitly requested or when project policy requires it.
+description: Use this skill when building the Expo mobile app (apps/mobile) locally into Android APK files or iOS IPA files, including checking native toolchains, generating native projects with Expo prebuild, signing, and locating build artifacts. Prefer local Gradle and xcodebuild workflows; use EAS local only when explicitly requested or when project policy requires it. This skill only applies to apps/mobile; web and api have their own deploy paths.
 ---
 
 # Deploy Skill
 
-Build release artifacts from this Expo Router app using local native toolchains first.
+Build release artifacts from `apps/mobile` (the Expo Router app) using
+local native toolchains first. All paths in this skill are relative to
+the repo root unless noted.
 
 ## Principles
 
@@ -13,26 +15,26 @@ Build release artifacts from this Expo Router app using local native toolchains 
   - Android APK: `expo prebuild` then Gradle.
   - iOS IPA: `expo prebuild` then `xcodebuild archive` and `xcodebuild -exportArchive`.
 - Use EAS local builds only when the user asks for EAS or when existing project config already depends on EAS.
-- Do not commit generated `android/` or `ios/` directories unless the user explicitly wants native projects checked in.
-- Expect `expo prebuild` to mutate native identity/config files such as `app.json` and package scripts. Report those changes before committing or cleaning up.
+- Do not commit generated `apps/mobile/android/` or `apps/mobile/ios/` directories unless the user explicitly wants native projects checked in.
+- Expect `expo prebuild` to mutate native identity/config files such as `apps/mobile/app.json` and package scripts. Report those changes before committing or cleaning up.
 - Do not invent signing credentials. Ask for or inspect the existing keystore, provisioning profile, certificate, team ID, and export options.
 - Run project quality checks before release builds unless the user asks for a fast diagnostic build.
 
 ## Preflight
 
-Run these checks before building:
+Run these checks from the repo root before building:
 
 ```sh
-npm run typecheck
-npm run lint
-npm test
-npx expo install --check
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm --filter mobile exec npx expo install --check
 ```
 
 Inspect app identity:
 
 ```sh
-cat app.json
+cat apps/mobile/app.json
 ```
 
 For release builds, confirm these fields exist:
@@ -50,7 +52,7 @@ Check local tools:
 
 ```sh
 node --version
-npx expo --version
+pnpm --filter mobile exec npx expo --version
 java --version
 echo "$ANDROID_HOME"
 ```
@@ -58,27 +60,27 @@ echo "$ANDROID_HOME"
 Generate or refresh the native Android project:
 
 ```sh
-npx expo prebuild --platform android
+pnpm --filter mobile exec npx expo prebuild --platform android
 ```
 
 Build a debug APK for local installation:
 
 ```sh
-cd android
+cd apps/mobile/android
 ./gradlew assembleDebug
 ```
 
 Build a release APK:
 
 ```sh
-cd android
+cd apps/mobile/android
 ./gradlew assembleRelease
 ```
 
-Expected artifacts:
+Expected artifacts (relative to repo root):
 
-- Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
-- Release APK: `android/app/build/outputs/apk/release/app-release.apk`
+- Debug APK: `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`
+- Release APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`
 
 If Gradle fails while downloading Maven artifacts with a read timeout, rerun the same Gradle command once. The retry often succeeds after earlier dependencies are cached.
 
@@ -86,10 +88,11 @@ Release signing normally requires Gradle signing config and keystore credentials
 
 ## Android APK With EAS Local
 
-Use this only when requested or already configured:
+Use this only when requested or already configured. Run from
+`apps/mobile`:
 
 ```sh
-npx eas build --platform android --profile preview --local
+pnpm --filter mobile exec npx eas build --platform android --profile preview --local
 ```
 
 For APK output, ensure the selected EAS profile uses:
@@ -109,7 +112,7 @@ Requirements:
 - macOS with Xcode installed.
 - Apple signing certificate in Keychain.
 - Provisioning profile installed locally.
-- `expo.ios.bundleIdentifier` configured.
+- `expo.ios.bundleIdentifier` configured in `apps/mobile/app.json`.
 - An export options plist for the intended distribution method.
 
 Check local tools:
@@ -123,20 +126,20 @@ security find-identity -v -p codesigning
 Generate or refresh the native iOS project:
 
 ```sh
-npx expo prebuild --platform ios
+pnpm --filter mobile exec npx expo prebuild --platform ios
 ```
 
 Install CocoaPods dependencies if needed:
 
 ```sh
-cd ios
+cd apps/mobile/ios
 pod install
 ```
 
 Archive:
 
 ```sh
-cd ios
+cd apps/mobile/ios
 xcodebuild archive \
   -workspace NewsTabs.xcworkspace \
   -scheme NewsTabs \
@@ -148,21 +151,21 @@ xcodebuild archive \
 Export IPA:
 
 ```sh
-cd ios
+cd apps/mobile/ios
 xcodebuild -exportArchive \
   -archivePath build/NewsTabs.xcarchive \
   -exportPath build/export \
   -exportOptionsPlist ExportOptions.plist
 ```
 
-Expected artifact:
+Expected artifact (relative to repo root):
 
-- `ios/build/export/*.ipa`
+- `apps/mobile/ios/build/export/*.ipa`
 
-Project, workspace, and scheme names may differ after prebuild. Inspect `ios/` and run this when unsure:
+Project, workspace, and scheme names may differ after prebuild. Inspect `apps/mobile/ios/` and run this when unsure:
 
 ```sh
-xcodebuild -list -workspace ios/*.xcworkspace
+xcodebuild -list -workspace apps/mobile/ios/*.xcworkspace
 ```
 
 ## iOS IPA With EAS Local
@@ -170,7 +173,7 @@ xcodebuild -list -workspace ios/*.xcworkspace
 Use this only when requested or already configured:
 
 ```sh
-npx eas build --platform ios --profile production --local
+pnpm --filter mobile exec npx eas build --platform ios --profile production --local
 ```
 
 EAS local still requires Apple credentials and project identity. If credentials are missing, stop and explain exactly which signing item is missing.

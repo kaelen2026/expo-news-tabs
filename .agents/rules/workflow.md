@@ -2,36 +2,59 @@
 
 ## Runtime Checks
 
-Use Expo Go first for runtime checks:
+Run each app's dev server with a pnpm filter:
 
 ```sh
-npm start
+pnpm --filter api dev      # Hono + tRPC on http://localhost:3001
+pnpm --filter web dev      # Next.js on http://localhost:3000
+pnpm --filter mobile dev   # Expo dev server (QR code for Expo Go)
 ```
 
-For web verification:
+For mobile platform-specific checks:
 
 ```sh
-npm run web
+pnpm --filter mobile ios       # iOS simulator
+pnpm --filter mobile android   # Android emulator
+pnpm --filter mobile web       # Mobile UI in browser via Metro
 ```
 
 ## Dependency Rules
 
-- Prefer Expo-compatible packages and install native modules with:
+- Always install from the repo root: `pnpm install`. Never run `npm install`
+  or `pnpm install` from inside a workspace directory.
+- Add a dependency to a specific workspace with a filter:
 
 ```sh
-npx expo install <package>
+pnpm --filter mobile add <package>
+pnpm --filter web add <package>
+pnpm --filter api add <package>
 ```
 
-- Use `npm install` or `npm install -D` for ordinary JS tooling.
-- After adding dependencies, run `npx expo install --check`.
+- Mobile native modules must be installed via Expo so SDK versions stay
+  aligned:
+
+```sh
+pnpm --filter mobile exec npx expo install <package>
+```
+
+- After adding mobile dependencies, run:
+
+```sh
+pnpm --filter mobile exec npx expo install --check
+```
+
+- To share types between workspaces, declare the producer as a workspace
+  dependency (`"api": "workspace:*"`) and import types from it. Do not
+  reach into another workspace via relative paths.
 
 ## Git Rules
 
 - Keep commits focused and descriptive.
-- Do not commit `node_modules/`, `.expo/`, generated local state, or editor caches.
-- Commit `package-lock.json` whenever dependencies change.
-- Do not commit generated native projects (`android/`, `ios/`) unless the
-  project explicitly checks them in.
+- Do not commit `node_modules/`, `.turbo/`, `.next/`, `.expo/`, generated
+  native projects, or editor caches.
+- Commit `pnpm-lock.yaml` (at the repo root) whenever dependencies change.
+- Do not commit generated native projects (`apps/mobile/android/`,
+  `apps/mobile/ios/`) unless the project explicitly checks them in.
 
 ## Branches
 
@@ -43,6 +66,8 @@ npx expo install <package>
   - `docs/<topic>` for documentation-only changes
   - `refactor/<topic>` for code restructuring with no behavior change
   - `chore/<topic>` for tooling, deps, or build config
+- When the change is workspace-scoped, prefix the topic with the
+  workspace name (e.g. `feat/mobile-share-sheet`, `fix/api-news-byId`).
 - Keep branches short-lived. Rebase or merge from `main` often enough
   that conflicts stay small.
 
@@ -50,6 +75,9 @@ npx expo install <package>
 
 - One intent per commit. Do not mix a bug fix with an unrelated
   refactor or a dependency bump.
+- One workspace per commit when practical. A cross-workspace API +
+  client change is fine in a single commit; a drive-by mobile refactor
+  bundled into a web change is not.
 - Subject line: imperative mood, no trailing period, ≤ 70 characters
   (e.g. "Add share sheet web fallback", not "added share sheet" or
   "share sheet stuff").
@@ -65,15 +93,22 @@ npx expo install <package>
 
 Before opening a pull request, confirm all of the following:
 
-- [ ] `npm run typecheck` passes.
-- [ ] `npm run lint` passes.
-- [ ] `npm test` passes.
-- [ ] `npx expo install --check` passes (only when dependencies changed).
-- [ ] UI changes were exercised in `npm run web` against the relevant
-      browser flows listed in `quality.md`.
-- [ ] New colors, spacing, radii, or sizes were added to
-      `contexts/app-theme.tsx` rather than inlined.
-- [ ] Reusable UI was placed in `components/`, not inside `app/`.
+- [ ] `pnpm typecheck` passes (covers every workspace via Turbo).
+- [ ] `pnpm lint` passes (single root Biome).
+- [ ] `pnpm test` passes.
+- [ ] `pnpm --filter mobile exec npx expo install --check` passes (only
+      when mobile dependencies changed).
+- [ ] UI changes to `apps/mobile` were exercised in
+      `pnpm --filter mobile web` against the relevant browser flows
+      listed in `quality.md`.
+- [ ] UI changes to `apps/web` were exercised in `pnpm --filter web dev`
+      against the relevant browser flows listed in `quality.md`.
+- [ ] tRPC procedure changes in `apps/api` were verified end-to-end with
+      at least one consumer (web or mobile).
+- [ ] New colors, spacing, radii, or sizes for mobile were added to
+      `apps/mobile/contexts/app-theme.tsx` rather than inlined.
+- [ ] Reusable mobile UI was placed in `apps/mobile/components/`, not
+      inside `apps/mobile/app/`.
 - [ ] Vitest coverage was added or updated for any new pure data or
       helper behavior.
 - [ ] Commit history is focused (no drive-by refactors mixed with the
@@ -84,14 +119,20 @@ Before opening a pull request, confirm all of the following:
 Avoid these. They show up repeatedly and they all degrade the codebase
 in ways the rules above are designed to prevent.
 
-- **Reusable code inside `app/`.** Components, helpers, or data
-  defined in a route file when more than one route could use them.
-  Move them to `components/`, `contexts/`, or `data/`.
-- **Inline theme literals.** Hard-coded colors, spacing, radii, or
-  sizes in JSX instead of `useAppTheme()` tokens. Add tokens at the
-  source instead.
-- **Direct `useColorScheme()` calls in UI.** Consume the theme through
-  `useAppTheme()` so light/dark/system mode stays coherent.
+- **Reusable code inside `apps/mobile/app/`.** Components, helpers, or
+  data defined in a route file when more than one route could use them.
+  Move them to `apps/mobile/components/`, `apps/mobile/contexts/`, or
+  `apps/mobile/data/`.
+- **Inline theme literals in mobile screens.** Hard-coded colors,
+  spacing, radii, or sizes in JSX instead of `useAppTheme()` tokens.
+  Add tokens at the source instead.
+- **Direct `useColorScheme()` calls in mobile UI.** Consume the theme
+  through `useAppTheme()` so light/dark/system mode stays coherent.
+- **Reaching into another workspace via relative paths** (e.g.
+  `../../api/src/router`). Add the workspace as a dependency and import
+  via its package name.
+- **Importing runtime code from `apps/api` into a client.** Only the
+  `AppRouter` *type* should cross that boundary.
 - **Drive-by refactors in a bug-fix commit.** Bundle them into a
   separate `refactor/...` commit so review and revert stay clean.
 - **Speculative abstraction.** Building extension points for

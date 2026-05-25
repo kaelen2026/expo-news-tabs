@@ -2,12 +2,15 @@ import { Stack } from "expo-router/stack";
 import { StatusBar } from "expo-status-bar";
 
 import { AppThemeProvider, useAppTheme } from "../contexts/app-theme";
+import { TrpcProvider } from "../lib/trpc";
 
 export default function RootLayout() {
   return (
-    <AppThemeProvider>
-      <RootStack />
-    </AppThemeProvider>
+    <TrpcProvider>
+      <AppThemeProvider>
+        <RootStack />
+      </AppThemeProvider>
+    </TrpcProvider>
   );
 }
 
