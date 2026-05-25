@@ -2,15 +2,45 @@ import { TRPCError } from "@trpc/server";
 import { closeDb, getDb, newsStory, runMigrations } from "db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { appRouter } from "./router";
+import type { Context } from "./trpc";
 
 const TEST_URL = process.env.TEST_DATABASE_URL;
+
+function anonymousContext(): Context {
+  return { user: null, session: null, headers: new Headers() };
+}
+
+function authedContext(overrides: Partial<NonNullable<Context["user"]>> = {}): Context {
+  const now = new Date();
+  const user: NonNullable<Context["user"]> = {
+    id: "user_test",
+    email: "test@example.com",
+    name: "Test User",
+    image: null,
+    emailVerified: true,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+  const session: NonNullable<Context["session"]> = {
+    id: "session_test",
+    userId: user.id,
+    token: "tok_test",
+    expiresAt: new Date(Date.now() + 60_000),
+    createdAt: now,
+    updatedAt: now,
+    ipAddress: null,
+    userAgent: null,
+  };
+  return { user, session, headers: new Headers() };
+}
 
 // These tests need a live Postgres dedicated to testing.
 //   TEST_DATABASE_URL=postgresql://app:app@localhost:5432/test pnpm --filter api test
 // They will TRUNCATE the news_story table, so don't point this at a database
 // you care about.
 describe.skipIf(!TEST_URL)("news router", () => {
-  const caller = appRouter.createCaller({});
+  const caller = appRouter.createCaller(anonymousContext());
 
   const base = new Date("2026-05-25T10:00:00Z").getTime();
   const minute = 60_000;
@@ -41,7 +71,6 @@ describe.skipIf(!TEST_URL)("news router", () => {
   }
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = TEST_URL;
     const db = getDb();
     await runMigrations(db);
     await db.delete(newsStory);
@@ -106,10 +135,36 @@ describe.skipIf(!TEST_URL)("news router", () => {
       await expect(caller.news.byId({ id: "test-does-not-exist" })).rejects.toMatchObject({
         code: "NOT_FOUND",
       });
-      // Also assert it's actually a TRPCError, not just an arbitrary throw.
       await expect(caller.news.byId({ id: "test-does-not-exist" })).rejects.toBeInstanceOf(
         TRPCError,
       );
+    });
+  });
+});
+
+// auth.me doesn't hit the database, so these run even without TEST_DATABASE_URL.
+describe("auth router", () => {
+  describe("auth.me", () => {
+    it("throws UNAUTHORIZED when there is no session", async () => {
+      const caller = appRouter.createCaller(anonymousContext());
+
+      await expect(caller.auth.me()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+      await expect(caller.auth.me()).rejects.toBeInstanceOf(TRPCError);
+    });
+
+    it("returns the current user when a session is present", async () => {
+      const caller = appRouter.createCaller(
+        authedContext({ id: "user_42", email: "a@b.co", name: "Ada" }),
+      );
+
+      const me = await caller.auth.me();
+      expect(me).toEqual({
+        id: "user_42",
+        email: "a@b.co",
+        name: "Ada",
+        image: null,
+        emailVerified: true,
+      });
     });
   });
 });

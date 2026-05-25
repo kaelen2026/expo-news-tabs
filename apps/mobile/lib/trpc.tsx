@@ -22,7 +22,14 @@ export function TrpcProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   const [client] = useState(() =>
     trpc.createClient({
-      links: [httpBatchLink({ url: `${resolveApiUrl()}/trpc` })],
+      links: [
+        httpBatchLink({
+          url: `${resolveApiUrl()}/trpc`,
+          // No browser cookies on native, but `credentials` is harmless and
+          // primes us to send Authorization headers in a follow-up PR.
+          fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
+        }),
+      ],
     }),
   );
 

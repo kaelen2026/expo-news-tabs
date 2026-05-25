@@ -1,9 +1,21 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { DEFAULT_PAGE_LIMIT, getStoryById, listStories, MAX_PAGE_LIMIT } from "./news";
-import { publicProcedure, router } from "./trpc";
+import { protectedProcedure, publicProcedure, router } from "./trpc";
 
 export const appRouter = router({
+  auth: router({
+    me: protectedProcedure.query(({ ctx }) => {
+      return {
+        id: ctx.user.id,
+        email: ctx.user.email,
+        name: ctx.user.name,
+        image: ctx.user.image ?? null,
+        emailVerified: ctx.user.emailVerified,
+      };
+    }),
+  }),
+
   news: router({
     list: publicProcedure
       .input(
