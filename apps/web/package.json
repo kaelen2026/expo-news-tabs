@@ -16,7 +16,7 @@
     "@trpc/server": "^11.0.0-rc.682",
     "api": "workspace:*",
     "auth-config": "workspace:*",
-    "better-auth": "^1.6.11",
+    "better-auth": "catalog:",
     "db": "workspace:*",
     "drizzle-orm": "^0.39.3",
     "next": "^16.0.0",
