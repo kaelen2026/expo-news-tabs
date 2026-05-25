@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    better-auth:
+      specifier: 1.6.11
+      version: 1.6.11
+
 importers:
 
   .:
@@ -42,7 +48,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/auth-config
       better-auth:
-        specifier: ^1.6.11
+        specifier: 'catalog:'
         version: 1.6.11(drizzle-kit@0.31.10)(drizzle-orm@0.39.3(kysely@0.28.17)(postgres@3.4.9))(next@16.2.6(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.1.7(@types/node@22.19.19)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.9.0)))
       db:
         specifier: workspace:*
@@ -194,7 +200,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/auth-config
       better-auth:
-        specifier: ^1.6.11
+        specifier: 'catalog:'
         version: 1.6.11(drizzle-kit@0.31.10)(drizzle-orm@0.39.3(kysely@0.28.17)(postgres@3.4.9))(next@16.2.6(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.1.7(@types/node@22.19.19)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.9.0)))
       db:
         specifier: workspace:*
@@ -243,7 +249,7 @@ importers:
   packages/auth-config:
     dependencies:
       better-auth:
-        specifier: ^1.6.11
+        specifier: 'catalog:'
         version: 1.6.11(drizzle-kit@0.31.10)(drizzle-orm@0.39.3(kysely@0.28.17)(postgres@3.4.9))(next@16.2.6(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vitest@4.1.7(@types/node@22.19.19)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.9.0)))
       db:
         specifier: workspace:*

@@ -1,3 +1,11 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Single source of truth for dependencies that MUST resolve to the same
+# version across every workspace. better-auth is pinned because two
+# betterAuth() instances (apps/api and apps/web) sign and verify the
+# same sessions against the same Postgres — a silent version drift
+# would only surface as "logged in on web, logged out on mobile."
+catalog:
+  better-auth: 1.6.11
