@@ -54,6 +54,8 @@ apps/
     data/               Local mock data + tests
     lib/trpc.tsx        tRPC + React Query provider (resolves API URL via Expo hostUri)
     metro.config.js     Monorepo-aware Metro config (watchFolders + nodeModulesPaths)
+    app.config.js       Re-exports app.json; picks a non-VPN LAN host for Metro
+    app.json            Expo config source (name, scheme, native identifiers)
 .agents/              Project rules, skills, and review sub-agent (mobile-focused)
 biome.json            Single Biome config for all workspaces
 turbo.json
@@ -85,13 +87,35 @@ Run an app locally:
 ```sh
 pnpm --filter api dev      # http://localhost:3001  (reads DATABASE_URL from apps/api/.env)
 pnpm --filter web dev      # http://localhost:3000
-pnpm --filter mobile dev   # Expo dev server (QR code)
+pnpm --filter mobile dev   # Metro dev server (loads in the custom dev client)
 ```
 
 To use the live API from the mobile app on a device, set
 `EXPO_PUBLIC_API_URL=http://<your-lan-ip>:3001` before `expo start`, or let
 `lib/trpc.tsx` derive it from Metro's `hostUri`. From a web browser pointed at
 `apps/web`, set `NEXT_PUBLIC_API_URL` if the API isn't on `localhost:3001`.
+
+### Mobile dev client
+
+`apps/mobile` runs in a custom Expo dev client, not the Expo Go app from the
+App Store — Expo Go lags SDK 56 and refuses to load this project. Build the
+dev client once per device, then `pnpm --filter mobile dev` for daily work.
+
+```sh
+# iOS — needs Xcode and an Apple ID added in Xcode → Settings → Accounts.
+# Enable Developer Mode on the iPhone (Settings → Privacy & Security).
+pnpm --filter mobile ios -- --device "<iPhone name>"
+
+# Android — needs Android Studio and a connected device or running emulator.
+pnpm --filter mobile android
+```
+
+After install, `pnpm --filter mobile dev` starts Metro and the dev client on
+the device picks it up automatically. `apps/mobile/app.config.js` chooses a
+LAN IP the phone can actually reach, skipping VPN-injected interfaces
+(OpenVPN / Cisco AnyConnect's `198.18.x.x`, link-local, CGNAT) before Expo CLI
+builds the manifest URL. Override with `REACT_NATIVE_PACKAGER_HOSTNAME=...`
+if you need to pin a specific host.
 
 ### Docker
 

@@ -16,7 +16,7 @@ the repo root unless noted.
   - iOS IPA: `expo prebuild` then `xcodebuild archive` and `xcodebuild -exportArchive`.
 - Use EAS local builds only when the user asks for EAS or when existing project config already depends on EAS.
 - Do not commit generated `apps/mobile/android/` or `apps/mobile/ios/` directories unless the user explicitly wants native projects checked in.
-- Expect `expo prebuild` to mutate native identity/config files such as `apps/mobile/app.json` and package scripts. Report those changes before committing or cleaning up.
+- Expect `expo prebuild` to mutate native identity/config files such as `apps/mobile/app.json` and package scripts. Report those changes before committing or cleaning up. The effective Expo config is `apps/mobile/app.config.js`, which re-exports `app.json` after a side effect that sets `REACT_NATIVE_PACKAGER_HOSTNAME` to a non-VPN LAN address; treat `app.json` as the data source.
 - Do not invent signing credentials. Ask for or inspect the existing keystore, provisioning profile, certificate, team ID, and export options.
 - Run project quality checks before release builds unless the user asks for a fast diagnostic build.
 

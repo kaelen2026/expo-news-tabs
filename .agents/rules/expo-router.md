@@ -27,7 +27,10 @@
 
 ## Expo Compatibility
 
-- Try Expo Go before custom native builds.
+- This project uses a custom dev client, not Expo Go. The App Store
+  build of Expo Go lags SDK 56 and refuses to load the project. Build
+  a dev client once with `pnpm --filter mobile ios` (or `android`),
+  then use `pnpm --filter mobile dev` for the Metro server.
 - Install Expo native modules with `pnpm --filter mobile exec npx expo install`.
 - Run `pnpm --filter mobile exec npx expo install --check` after
   dependency changes in `apps/mobile`.
