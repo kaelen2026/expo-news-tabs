@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { AsyncState } from "../async-state";
+import { KNOWN_CATEGORIES } from "../categories";
 import { trpc } from "../trpc-provider";
 
 const THEMES = ["system", "light", "dark"] as const;
 const FONT_SIZES = ["sm", "md", "lg"] as const;
-const CATEGORIES = ["", "Local", "Science", "Business", "Culture", "Sports", "Tech"];
+const CATEGORIES = ["", ...KNOWN_CATEGORIES] as const;
 
 export default function PreferencesPage() {
   const session = useSession();
