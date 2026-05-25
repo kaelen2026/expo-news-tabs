@@ -1,6 +1,14 @@
 import { useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 import { AsyncState } from "../../components/async-state";
 import { NewsCard } from "../../components/news-card";
@@ -9,20 +17,60 @@ import { useAuth } from "../../lib/auth";
 import { trpc } from "../../lib/trpc";
 import { useUserStoryData } from "../../lib/user-data";
 
+// Shown in the same order as the chips on the web Preferences page so
+// the two surfaces feel consistent. Free-form `defaultCategory` strings
+// that don't match a chip fall back to "All" silently.
+const CATEGORIES = ["Local", "Science", "Business", "Culture", "Sports", "Tech"] as const;
+type Category = (typeof CATEGORIES)[number];
+const CATEGORY_SET = new Set<string>(CATEGORIES);
+
+const PAGE_LIMIT_DEFAULT = 6;
+// Filtering happens client-side, so a 6-row page often nets 0–1 items in
+// the chosen category. Pulling a bigger page when a filter is active
+// keeps the list from feeling empty without changing the API contract.
+const PAGE_LIMIT_FILTERED = 24;
+
 export default function HomeScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const { favoriteSet, readSet, toggleFavorite } = useUserStoryData();
 
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+
+  // Hydrate the chip selection from preferences.defaultCategory the
+  // first time prefs come back. Subsequent chip taps are local — the
+  // server-side default still lives on the web Preferences page.
+  const prefsQuery = trpc.preferences.get.useQuery(undefined, { enabled: isAuthenticated });
+  const [hydratedFromPrefs, setHydratedFromPrefs] = useState(false);
+  useEffect(() => {
+    if (hydratedFromPrefs) return;
+    if (!isAuthenticated) {
+      setHydratedFromPrefs(true);
+      return;
+    }
+    if (prefsQuery.isSuccess) {
+      const def = prefsQuery.data?.defaultCategory ?? null;
+      if (def && CATEGORY_SET.has(def)) {
+        setSelectedCategory(def as Category);
+      }
+      setHydratedFromPrefs(true);
+    }
+  }, [hydratedFromPrefs, isAuthenticated, prefsQuery.isSuccess, prefsQuery.data]);
+
   const query = trpc.news.list.useInfiniteQuery(
-    { limit: 6 },
+    { limit: selectedCategory ? PAGE_LIMIT_FILTERED : PAGE_LIMIT_DEFAULT },
     { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
   );
 
-  const stories = useMemo(
+  const allStories = useMemo(
     () => query.data?.pages.flatMap((page) => page.items) ?? [],
     [query.data],
+  );
+  const stories = useMemo(
+    () =>
+      selectedCategory ? allStories.filter((s) => s.category === selectedCategory) : allStories,
+    [allStories, selectedCategory],
   );
 
   const refreshControl = useMemo(
@@ -44,7 +92,7 @@ export default function HomeScreen() {
   }, [query.hasNextPage, query.isFetchingNextPage, query.fetchNextPage]);
 
   const Header = (
-    <View style={{ gap: 8, paddingBottom: 4 }}>
+    <View style={{ gap: 12, paddingBottom: 4 }}>
       <View
         style={{ alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" }}
       >
@@ -82,6 +130,7 @@ export default function HomeScreen() {
       <Text selectable style={{ color: colors.muted, fontSize: 16, lineHeight: 23 }}>
         A focused feed of local, science, business, and culture updates.
       </Text>
+      <CategoryChips selected={selectedCategory} onSelect={setSelectedCategory} />
     </View>
   );
 
@@ -125,7 +174,11 @@ export default function HomeScreen() {
           isLoading={false}
           isError={false}
           isEmpty
-          emptyLabel="No stories yet — check back soon."
+          emptyLabel={
+            selectedCategory
+              ? `No ${selectedCategory.toLowerCase()} stories yet — try another topic.`
+              : "No stories yet — check back soon."
+          }
         >
           {null}
         </AsyncState>
@@ -153,5 +206,60 @@ export default function HomeScreen() {
         paddingBottom: 28,
       }}
     />
+  );
+}
+
+function CategoryChips({
+  selected,
+  onSelect,
+}: {
+  selected: Category | null;
+  onSelect: (next: Category | null) => void;
+}) {
+  const { colors } = useAppTheme();
+  const items: { label: string; value: Category | null }[] = [
+    { label: "All", value: null },
+    ...CATEGORIES.map((c) => ({ label: c, value: c })),
+  ];
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+    >
+      {items.map((item) => {
+        const active = selected === item.value;
+        return (
+          <Pressable
+            key={item.label}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter stories by ${item.label}`}
+            accessibilityState={{ selected: active }}
+            onPress={() => onSelect(item.value)}
+            style={({ pressed }) => ({
+              backgroundColor: active ? colors.accent : colors.card,
+              borderColor: active ? colors.accent : colors.border,
+              borderCurve: "continuous",
+              borderRadius: 999,
+              borderWidth: 1,
+              opacity: pressed ? 0.72 : 1,
+              paddingHorizontal: 14,
+              paddingVertical: 7,
+            })}
+          >
+            <Text
+              selectable
+              style={{
+                color: active ? colors.background : colors.text,
+                fontSize: 13,
+                fontWeight: "700",
+              }}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
   );
 }
