@@ -1,15 +1,24 @@
 # News Tabs (Monorepo)
 
-Turborepo workspace with three apps and a shared `db` package:
+Turborepo workspace with three apps and two shared packages:
 
-- **`apps/mobile`** — the original Expo Router app (iOS / Android / Web via
-  Metro). React 19, React Native 0.85, New Architecture.
-- **`apps/web`** — a Next.js 16 App Router landing page with Tailwind CSS v4,
-  consuming the API via tRPC and handling auth with **better-auth**.
-- **`apps/api`** — a Hono server exposing a tRPC router that queries
-  **PostgreSQL via Drizzle ORM**. Ships with a `Dockerfile`.
-- **`packages/db`** — shared Drizzle schema (news + better-auth tables) and
-  postgres-js client used by both `apps/api` and `apps/web`.
+- **`apps/mobile`** — Expo Router app (iOS / Android / Web via Metro).
+  React 19, React Native 0.85, New Architecture. Bearer-token auth so
+  the native app can talk to the API directly.
+- **`apps/web`** — Next.js 16 App Router app with Tailwind CSS v4. Hosts
+  its own better-auth route at `/api/auth/*` and consumes the API via
+  tRPC.
+- **`apps/api`** — Hono server. Exposes a tRPC router backed by
+  **PostgreSQL + Drizzle ORM** and a second better-auth instance at
+  `/auth/*` for mobile. Multi-stage Dockerfile builds to `dist/` and
+  runs the compiled output.
+- **`packages/db`** — shared Drizzle schema (news + better-auth tables)
+  and postgres-js client used by `apps/api`, `apps/web`, and
+  `packages/auth-config`.
+- **`packages/auth-config`** — shared better-auth ingredients (secret,
+  Drizzle adapter, plugins, email/password) that MUST agree across
+  `apps/api` and `apps/web` for cross-app sessions to interoperate.
+  Refuses to start in production with the dev fallback secret.
 
 Type safety is end-to-end: `apps/api` exports the `AppRouter` type, and both
 `apps/web` and `apps/mobile` depend on it as a workspace package (`"api":
@@ -17,17 +26,18 @@ Type safety is end-to-end: `apps/api` exports the `AppRouter` type, and both
 
 ## Stack
 
-| Workspace      | Tech                                                       |
-| -------------- | ---------------------------------------------------------- |
-| Monorepo       | pnpm workspaces + Turborepo                                |
-| `apps/api`     | Hono 4, tRPC 11, Zod, `@hono/node-server`, Drizzle, Docker |
-| `apps/web`     | Next.js 16, App Router, Tailwind CSS v4, React 19, better-auth |
-| `apps/mobile`  | Expo SDK 56, expo-router, React Native 0.85, New Arch      |
-| `packages/db`  | Drizzle ORM + postgres-js, drizzle-kit migrations          |
-| Database       | PostgreSQL 17 (via `docker-compose.yml`)                   |
-| Lint / Format  | Biome 2 (single root config)                               |
-| Tests          | Vitest                                                     |
-| Language       | TypeScript 6, `strict` enabled, shared `tsconfig.base.json`|
+| Workspace             | Tech                                                       |
+| --------------------- | ---------------------------------------------------------- |
+| Monorepo              | pnpm workspaces + Turborepo                                |
+| `apps/api`            | Hono 4, tRPC 11, Zod, `@hono/node-server`, Drizzle, Docker |
+| `apps/web`            | Next.js 16, App Router, Tailwind CSS v4, React 19, better-auth |
+| `apps/mobile`         | Expo SDK 56, expo-router, React Native 0.85, New Arch      |
+| `packages/db`         | Drizzle ORM + postgres-js, drizzle-kit migrations          |
+| `packages/auth-config`| Shared better-auth options (secret, adapter, plugins)      |
+| Database              | PostgreSQL 17 (via `docker-compose.yml`)                   |
+| Lint / Format         | Biome 2 (single root config)                               |
+| Tests                 | Vitest                                                     |
+| Language              | TypeScript 6, `strict` enabled, shared `tsconfig.base.json`|
 
 ## Layout
 
@@ -46,23 +56,40 @@ apps/
         preferences/     preferences.get / update (authed; theme/fontSize/defaultCategory)
   web/
     app/
-      layout.tsx        Root layout, wraps in TrpcProvider
-      page.tsx          Landing page; renders trpc.news.list result
-      trpc-provider.tsx Client-side tRPC + React Query provider
-      globals.css       Tailwind v4 (@import "tailwindcss") + @theme tokens
+      layout.tsx          Root layout, wraps in TrpcProvider
+      page.tsx            Home feed; category chip row driven by preferences.defaultCategory
+      categories.ts       Shared chip set + isKnownCategory guard
+      preferences/        Theme / fontSize / default-category editor
+      favorites/          Favorited stories
+      sign-in/, sign-up/  better-auth email+password forms
+      api/auth/[...all]/  better-auth route handler
+      trpc-provider.tsx   Client-side tRPC + React Query provider
+      globals.css         Tailwind v4 (@import "tailwindcss") + @theme tokens
+    lib/
+      auth.ts             Server-side betterAuth() (spreads shared options)
+      auth-client.ts      Client-side createAuthClient
     next.config.ts
     postcss.config.mjs
   mobile/
-    app/                Expo Router routes (Stack + Tabs)
-    components/         Reusable UI primitives
-    contexts/           Theme context
-    data/               Local mock data + tests
-    lib/trpc.tsx        tRPC + React Query provider (resolves API URL via Expo hostUri)
-    metro.config.js     Monorepo-aware Metro config (watchFolders + nodeModulesPaths)
-    app.config.js       Re-exports app.json; picks a non-VPN LAN host for Metro
-    app.json            Expo config source (name, scheme, native identifiers)
-.agents/              Project rules, skills, and review sub-agent (mobile-focused)
-biome.json            Single Biome config for all workspaces
+    app/
+      (tabs)/             Home (chip-filtered feed), Favorites, Profile
+      news/[id].tsx       Story detail
+      settings.tsx        Theme picker (synced via preferences.update)
+      sign-in.tsx, sign-up.tsx
+      _layout.tsx         Stack + AuthProvider + TrpcProvider
+    components/           Reusable UI primitives + NewsCard
+    contexts/             Theme context
+    lib/
+      auth.tsx            AuthProvider; bearer token in SecureStore (native) / localStorage (web)
+      trpc.tsx            tRPC + React Query provider; attaches Authorization header
+    metro.config.js       Monorepo-aware Metro config (watchFolders + nodeModulesPaths)
+    app.config.js         Re-exports app.json; picks a non-VPN LAN host for Metro
+    app.json              Expo config source (name, scheme, native identifiers)
+packages/
+  db/                     Drizzle schema + postgres-js client (lazy getDb)
+  auth-config/            getSharedAuthOptions() + production secret check
+.agents/                  Project rules, skills, and review sub-agent (mobile-focused)
+biome.json                Single Biome config for all workspaces
 turbo.json
 pnpm-workspace.yaml
 tsconfig.base.json
@@ -146,14 +173,35 @@ pnpm db:seed       # upsert news rows from src/seed-data.ts
 pnpm db:studio     # open Drizzle Studio
 ```
 
-### Auth (apps/web)
+### Auth
 
-`apps/web` hosts better-auth at `/api/auth/[...all]`. Email + password is
-on by default; Google / GitHub OAuth turn on automatically when their
-client ID + secret env vars are set (see `apps/web/.env.example`).
+`apps/api` and `apps/web` each run their own better-auth instance against
+the same Postgres database, so a session minted by either side verifies
+on the other:
 
-Sign-in / sign-up pages live at `/sign-in` and `/sign-up`. The landing
-page shows a `<SessionIndicator />` that swaps between sign in/out links.
+- **`apps/web`** mounts better-auth at `/api/auth/[...all]`. Cookie-based
+  sessions for the browser; Google / GitHub OAuth turn on automatically
+  when their client ID + secret env vars are set (see
+  `apps/web/.env.example`). Sign-in / sign-up live at `/sign-in` and
+  `/sign-up`; the landing page shows a `<SessionIndicator />` that
+  swaps between sign in/out links.
+- **`apps/api`** mounts better-auth at `/auth/*` for mobile. Native
+  clients can't share browser cookies, so the [bearer
+  plugin](https://www.better-auth.com/docs/plugins/bearer) lets the
+  Expo app send `Authorization: Bearer <token>` after sign-in. The
+  token is stored in `expo-secure-store` on native and `localStorage`
+  on web (see `apps/mobile/lib/auth.tsx`).
+
+The shared parts of the config — secret, Drizzle adapter, plugins,
+email/password — live in `packages/auth-config` so the two instances
+can't drift. **`BETTER_AUTH_SECRET` MUST be byte-identical on both
+apps**; the shared package refuses to start in production with the dev
+fallback. `DATABASE_URL` must also point at the same database since
+sessions live there.
+
+The mobile Profile tab shows the signed-in user, a Read / Saved / Topics
+stat row computed from `reads.ids` + `favorites.list`, and a sign-out
+button.
 
 ## Quality Checks
 
@@ -222,6 +270,28 @@ trpc.news.list.useInfiniteQuery(
   { getNextPageParam: (last) => last.nextCursor ?? undefined },
 );
 ```
+
+## Reading preferences
+
+`preferences.get` / `preferences.update` persist `theme`, `fontSize`,
+and `defaultCategory` per user.
+
+- **`theme`** — `system` / `light` / `dark`. The mobile Settings screen
+  hydrates from this on sign-in (`apps/mobile/app/settings.tsx`); the
+  web Preferences page edits it directly
+  (`apps/web/app/preferences/page.tsx`).
+- **`defaultCategory`** — drives the initial selection of the category
+  chip row on both home feeds (`apps/web/app/page.tsx`,
+  `apps/mobile/app/(tabs)/index.tsx`). The chip set is `All` plus
+  `Local / Science / Business / Culture / Sports / Tech`. Stored values
+  that don't match a known chip silently fall back to `All`. Subsequent
+  chip taps are local to the session — to change the saved default,
+  edit it on the web Preferences page.
+- **`fontSize`** — stored but not yet consumed in the UI.
+
+Filtering is client-side. `news.list` is unaware of `defaultCategory`;
+each client just asks for a bigger page (`limit: 24` vs the unfiltered
+`limit: 6`) while a filter is active.
 
 ## Agents and Contributor Rules
 
