@@ -37,6 +37,14 @@ pnpm lint        # biome check . (root-level, covers everything)
 pnpm test        # turbo run test
 ```
 
+DB-backed tests in `apps/api` are gated on `TEST_DATABASE_URL` and are
+silently skipped without it. CI provisions a Postgres service container
+and sets the var; locally, run them against a throwaway database:
+
+```sh
+TEST_DATABASE_URL=postgresql://app:app@localhost:5432/test pnpm --filter api test
+```
+
 Database / Docker:
 
 ```sh

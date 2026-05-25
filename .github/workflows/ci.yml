@@ -15,6 +15,28 @@ jobs:
   verify:
     name: typecheck, lint, test
     runs-on: ubuntu-latest
+
+    # A throwaway Postgres for the DB-backed tests in apps/api. Without
+    # TEST_DATABASE_URL those tests would `describe.skipIf` themselves and
+    # we'd ship broken news/favorites/reads/preferences code silently.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://app:app@localhost:5432/app
+
     steps:
       - uses: actions/checkout@v4
 

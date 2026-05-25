@@ -35,10 +35,15 @@ Type safety is end-to-end: `apps/api` exports the `AppRouter` type, and both
 apps/
   api/
     src/
-      server.ts      Hono entry: CORS + logger + mounted tRPC at /trpc
-      router.ts      tRPC router with news.list / news.byId; exports AppRouter
-      trpc.ts        initTRPC factory
-      news.ts        Mock news data + getStoryById
+      server.ts          Hono entry: CORS + logger + mounted tRPC at /trpc and better-auth at /auth/*
+      app.router.ts      Composes per-module tRPC routers; exports AppRouter
+      core/              trpc init, request context, env config
+      modules/
+        auth/            better-auth handler + tRPC auth router (auth.me)
+        news/            Cursor-paginated news.list + news.byId (reads from Postgres)
+        favorites/       favorites.list / ids / toggle (authed)
+        reads/           reads.list / ids / markRead (authed)
+        preferences/     preferences.get / update (authed; theme/fontSize/defaultCategory)
   web/
     app/
       layout.tsx        Root layout, wraps in TrpcProvider
@@ -155,9 +160,20 @@ page shows a `<SessionIndicator />` that swaps between sign in/out links.
 ```sh
 pnpm typecheck   # turbo run typecheck across all workspaces
 pnpm lint        # biome check . (root)
-pnpm test        # turbo run test (mobile data tests; web/api pass with no tests)
+pnpm test        # turbo run test
 pnpm format      # biome format --write .
 ```
+
+Tests in `apps/api/src/router.test.ts` that touch Postgres are gated on
+`TEST_DATABASE_URL` and skipped without it — point it at a throwaway
+database (the test suite TRUNCATEs tables it owns):
+
+```sh
+TEST_DATABASE_URL=postgresql://app:app@localhost:5432/test pnpm --filter api test
+```
+
+CI sets this automatically against a Postgres service container (see
+`.github/workflows/ci.yml`); locally, start the compose stack first.
 
 After dependency changes in `apps/mobile` also run:
 
@@ -167,12 +183,27 @@ pnpm --filter mobile exec npx expo install --check
 
 ## tRPC Contract
 
-`apps/api/src/router.ts` defines the contract:
+`apps/api/src/app.router.ts` composes the per-module routers. Key procedures:
 
 ```ts
-news.list   ({ page?: 1 | 2 | 3 })  →  { page, hasMore, stories: NewsStory[] }
-news.byId   ({ id: string })        →  NewsStory   (404 → TRPCError NOT_FOUND)
+// news (public)
+news.list   ({ cursor?: string; limit?: number })  →  { items: NewsStory[]; nextCursor: string | null }
+news.byId   ({ id: string })                       →  NewsStory   (404 → TRPCError NOT_FOUND)
+
+// auth (public; reads session from headers)
+auth.me     ()                                     →  { user, session } | null
+
+// favorites / reads (authed)
+favorites.list  / favorites.ids  / favorites.toggle({ storyId })
+reads.list      / reads.ids      / reads.markRead({ storyId })
+
+// preferences (authed)
+preferences.get  / preferences.update({ theme?, fontSize?, defaultCategory? })
 ```
+
+`news.list` uses opaque cursor pagination — pass the previous response's
+`nextCursor` to load the next page. `limit` is clamped to `[1, 50]` and
+defaults to `10`.
 
 Both clients consume it the same way:
 
@@ -181,8 +212,15 @@ import type { AppRouter } from "api";
 import { createTRPCReact } from "@trpc/react-query";
 
 export const trpc = createTRPCReact<AppRouter>();
-// ...
-trpc.news.list.useQuery({ page: 1 });
+
+// One-shot
+trpc.news.list.useQuery({ limit: 10 });
+
+// Infinite scroll
+trpc.news.list.useInfiniteQuery(
+  { limit: 10 },
+  { getNextPageParam: (last) => last.nextCursor ?? undefined },
+);
 ```
 
 ## Agents and Contributor Rules
