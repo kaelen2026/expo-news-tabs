@@ -9,8 +9,39 @@ import {
   useMemo,
   useState,
 } from "react";
+import { Platform } from "react-native";
 
 const TOKEN_KEY = "expo-news-tabs.session_token";
+
+// `expo-secure-store`'s web shim is `export default {}`, so calling
+// `SecureStore.getItemAsync` on web throws "getValueWithKeyAsync is not
+// a function". Route web through `localStorage` and keep SecureStore for
+// native, where it's the only acceptable place to hold a bearer token.
+const tokenStore = {
+  async get(): Promise<string | null> {
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined") return null;
+      return window.localStorage.getItem(TOKEN_KEY);
+    }
+    return SecureStore.getItemAsync(TOKEN_KEY);
+  },
+  async set(value: string): Promise<void> {
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined") return;
+      window.localStorage.setItem(TOKEN_KEY, value);
+      return;
+    }
+    await SecureStore.setItemAsync(TOKEN_KEY, value);
+  },
+  async remove(): Promise<void> {
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined") return;
+      window.localStorage.removeItem(TOKEN_KEY);
+      return;
+    }
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  },
+};
 
 type MobileUser = {
   id: string;
@@ -44,9 +75,9 @@ export function resolveApiUrl(): string {
   return "http://localhost:3001";
 }
 
-// Read the bearer token synchronously from SecureStore between renders so the
-// tRPC link can attach the Authorization header. We mirror the value in a
-// module-level variable so non-React callers can access it.
+// Mirror the bearer token in a module-level variable so the tRPC link can
+// attach the Authorization header synchronously between renders, without
+// awaiting the platform-specific token store on every request.
 let currentToken: string | null = null;
 export function getCurrentAuthToken() {
   return currentToken;
@@ -62,9 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentToken = nextToken;
     setTokenState(nextToken);
     if (nextToken) {
-      await SecureStore.setItemAsync(TOKEN_KEY, nextToken);
+      await tokenStore.set(nextToken);
     } else {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await tokenStore.remove();
     }
   }, []);
 
@@ -88,12 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [apiUrl],
   );
 
-  // On mount: rehydrate token from SecureStore + revalidate against the API.
+  // On mount: rehydrate token from the platform token store + revalidate.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const stored = await SecureStore.getItemAsync(TOKEN_KEY);
+        const stored = await tokenStore.get();
         if (cancelled) return;
         currentToken = stored;
         setTokenState(stored);
