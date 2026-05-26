@@ -17,21 +17,9 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: expo-example-api
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-    environment:
-      DATABASE_URL: postgresql://app:app@postgres:5432/app
-      PORT: "3001"
-      NODE_ENV: production
-    depends_on:
-      postgres:
-        condition: service_healthy
+# The api service used to run here too. It now ships as a Cloudflare
+# Worker — run `pnpm --filter api dev` (which calls `wrangler dev`) for
+# a local Worker simulator that talks to this postgres container.
 
 volumes:
   postgres-data:

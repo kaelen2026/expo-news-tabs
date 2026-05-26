@@ -8,10 +8,10 @@ Turborepo workspace with three apps and two shared packages:
 - **`apps/web`** — Next.js 16 App Router app with Tailwind CSS v4. Hosts
   its own better-auth route at `/api/auth/*` and consumes the API via
   tRPC.
-- **`apps/api`** — Hono server. Exposes a tRPC router backed by
-  **PostgreSQL + Drizzle ORM** and a second better-auth instance at
-  `/auth/*` for mobile. Multi-stage Dockerfile builds to `dist/` and
-  runs the compiled output.
+- **`apps/api`** — Hono app deployed as a **Cloudflare Worker**. Exposes
+  a tRPC router backed by **PostgreSQL + Drizzle ORM** (Supabase in
+  production) and a second better-auth instance at `/auth/*` for mobile.
+  Local dev runs the same code under `wrangler dev`.
 - **`packages/db`** — shared Drizzle schema (news + better-auth tables)
   and postgres-js client used by `apps/api`, `apps/web`, and
   `packages/auth-config`.
@@ -29,7 +29,7 @@ Type safety is end-to-end: `apps/api` exports the `AppRouter` type, and both
 | Workspace             | Tech                                                       |
 | --------------------- | ---------------------------------------------------------- |
 | Monorepo              | pnpm workspaces + Turborepo                                |
-| `apps/api`            | Hono 4, tRPC 11, Zod, `@hono/node-server`, Drizzle, Docker |
+| `apps/api`            | Hono 4 on Cloudflare Workers, tRPC 11, Zod, Drizzle, Wrangler |
 | `apps/web`            | Next.js 16, App Router, Tailwind CSS v4, React 19, better-auth |
 | `apps/mobile`         | Expo SDK 56, expo-router, React Native 0.85, New Arch      |
 | `packages/db`         | Drizzle ORM + postgres-js, drizzle-kit migrations          |
@@ -103,10 +103,11 @@ Prerequisites: Node 24+, pnpm 9+ (`corepack enable pnpm` works), Docker.
 pnpm install
 
 # Copy env templates; set BETTER_AUTH_SECRET (openssl rand -base64 32) etc.
-cp apps/api/.env.example apps/api/.env
+# apps/api uses wrangler's `.dev.vars` for local secrets, not a .env file.
+cp apps/api/.dev.vars.example apps/api/.dev.vars
 cp apps/web/.env.example apps/web/.env.local
 
-# Start Postgres (and the API container if you want it Dockerized)
+# Start local Postgres
 pnpm docker:up
 
 # Apply schema + seed news rows
@@ -117,10 +118,15 @@ pnpm db:seed
 Run an app locally:
 
 ```sh
-pnpm --filter api dev      # http://localhost:3001  (reads DATABASE_URL from apps/api/.env)
+pnpm --filter api dev      # http://localhost:3001 (wrangler dev, loads .dev.vars)
 pnpm --filter web dev      # http://localhost:3000
 pnpm --filter mobile dev   # Metro dev server (loads in the custom dev client)
 ```
+
+`pnpm --filter api dev` runs `wrangler dev`, which simulates the
+Cloudflare Workers runtime locally and reads secrets from
+`apps/api/.dev.vars` (gitignored). Non-secret vars live in
+`apps/api/wrangler.toml`.
 
 To use the live API from the mobile app on a device, set
 `EXPO_PUBLIC_API_URL=http://<your-lan-ip>:3001` before `expo start`, or let
@@ -152,13 +158,15 @@ if you need to pin a specific host.
 ### Docker
 
 ```sh
-pnpm docker:up        # postgres + api (api on :3001, postgres on :5432)
+pnpm docker:up        # postgres on :5432
 pnpm docker:logs      # follow logs
 pnpm docker:down      # stop everything
 ```
 
-The compose file mounts a `postgres-data` volume so data persists between
-restarts. Drop it with `docker compose down -v` for a clean slate.
+Only postgres runs in Docker now — the API runs under `wrangler dev`
+locally and on Cloudflare Workers in production. The compose file mounts
+a `postgres-data` volume so data persists between restarts. Drop it with
+`docker compose down -v` for a clean slate.
 
 ### Database
 
@@ -268,6 +276,58 @@ Vercel's default and not configurable per project).
 
 4. First push to `main` after connecting triggers the production
    deployment; future PRs get preview URLs commented on the PR.
+
+## Deploying `apps/api` to Cloudflare Workers
+
+`apps/api` deploys as a single shared Cloudflare Worker. All Vercel
+preview deployments of `apps/web` talk to this one Worker — there's no
+per-PR API isolation by design (one Postgres, one Worker, simpler ops).
+
+`.github/workflows/deploy-api.yml` deploys on every push to `main` that
+touches `apps/api/**`, `packages/db/**`, `packages/auth-config/**`, or
+lockfile / workspace config. PR builds do not deploy.
+
+### One-time Cloudflare + GitHub setup
+
+1. **Cloudflare account → API Token.** My Profile → API Tokens →
+   _Create Token_ → use the "Edit Cloudflare Workers" template. Scope it
+   to your account.
+
+2. **GitHub Secrets** (repo settings → Secrets and variables → Actions):
+   - `CLOUDFLARE_API_TOKEN` — the token from step 1
+   - `CLOUDFLARE_ACCOUNT_ID` — find at `dash.cloudflare.com/<id>` or the
+     account home page
+
+3. **Edit `apps/api/wrangler.toml`** placeholders:
+   - `name` — Worker name (default `expo-news-tabs-api`)
+   - `[vars] WEB_ORIGIN` — your Vercel production origin
+   - `[vars] API_AUTH_URL` — the public URL of this Worker
+     (`https://<name>.<your-subdomain>.workers.dev`, or your custom
+     domain). Used by better-auth to advertise its own endpoints.
+
+4. **Set Worker secrets** (one-time, never committed):
+
+   ```sh
+   cd apps/api
+   pnpm wrangler secret put DATABASE_URL          # Supabase Pooler URL (port 6543)
+   pnpm wrangler secret put BETTER_AUTH_SECRET    # Same value as apps/web's secret
+   ```
+
+5. **First deploy.** Either push to `main` (CI deploys) or run
+   `pnpm --filter api deploy` locally with the same Cloudflare login.
+
+6. **Schema:** point `DATABASE_URL` at the Supabase Pooler and run
+   `pnpm db:migrate && pnpm db:seed` locally to provision the database.
+
+### Local dev
+
+`pnpm --filter api dev` runs `wrangler dev` on port 3001, simulating the
+Workers runtime. Secrets come from `apps/api/.dev.vars` (gitignored);
+non-secret config comes from `wrangler.toml`. Use the local docker-compose
+Postgres or point `DATABASE_URL` at a Supabase project.
+
+`apps/api/src/server.ts` exports a Workers `fetch` handler. There is no
+long-running listen step — every request is a Worker invocation.
 
 ## tRPC Contract
 

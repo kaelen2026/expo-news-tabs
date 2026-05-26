@@ -1,0 +1,13 @@
+# `wrangler dev` reads this file as the source of secrets when running
+# locally. Copy to `.dev.vars` (gitignored) and fill in. For non-secret
+# vars edit `wrangler.toml` directly.
+
+# Same Supabase Pooler URL as Vercel uses. Transaction pooler (port
+# 6543) is the right one for Workers — short-lived per-request
+# connections, no prepared statements.
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true
+
+# MUST be byte-identical to apps/web's BETTER_AUTH_SECRET, or sessions
+# minted by one verify-fail on the other. Generate with:
+#   openssl rand -base64 32
+BETTER_AUTH_SECRET=
