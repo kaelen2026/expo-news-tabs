@@ -1,5 +1,3 @@
-import "dotenv/config";
-import { serve } from "@hono/node-server";
 import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -68,6 +66,9 @@ app.use(
   }),
 );
 
-serve({ fetch: app.fetch, port: config.port }, (info) => {
-  logger.info({ port: info.port }, "api listening");
-});
+// Cloudflare Workers entrypoint. `wrangler dev` and the deployed Worker
+// both call this default export's fetch. There's no long-running listen
+// step — each request is a function invocation.
+export default {
+  fetch: app.fetch,
+};

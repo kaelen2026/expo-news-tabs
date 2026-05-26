@@ -1,0 +1,49 @@
+name: Deploy API
+
+# Deploy the apps/api Worker to Cloudflare on every push to main that
+# touches code the Worker bundles. PR pushes do NOT deploy — that would
+# require per-PR Workers (we chose a single shared Worker; web previews
+# all talk to this one URL).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/db/**"
+      - "packages/auth-config/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/deploy-api.yml"
+
+# A second push to main shouldn't race the previous deploy.
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Run typecheck before deploy. Wrangler's bundler will catch
+      # runtime-level issues, but a tsc pass surfaces dependency-graph
+      # errors (e.g. a packages/db change that broke a route) before we
+      # ship a broken Worker.
+      - run: pnpm --filter api typecheck
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          workingDirectory: apps/api
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --minify

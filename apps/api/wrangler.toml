@@ -1,0 +1,36 @@
+name = "expo-news-tabs-api"
+main = "src/server.ts"
+compatibility_date = "2026-05-26"
+
+# nodejs_compat lets us keep `process.env.X` reads (treated as wrangler
+# vars + secrets), `node:crypto.randomUUID()` in the request logger, and
+# the postgres-js TCP socket layer that drives packages/db. Without this
+# flag the bundle would need a major refactor to route every env lookup
+# through Hono's `c.env`.
+compatibility_flags = ["nodejs_compat"]
+
+# Pin the local dev port to 3001 — apps/mobile derives the API URL from
+# Metro's `hostUri` and defaults to that port. Without this wrangler dev
+# would default to 8787 and break the mobile dev client without an
+# EXPO_PUBLIC_API_URL override.
+[dev]
+port = 3001
+
+# Per-script logs in the Cloudflare dashboard (and `wrangler tail`).
+# Off by default; enabling here so the structured logs emitted by
+# core/logger.ts are actually captured.
+[observability.logs]
+enabled = true
+
+# Non-secret config. Override per environment if you add staging.
+# Secrets (DATABASE_URL, BETTER_AUTH_SECRET) are set via
+# `wrangler secret put` — never commit them.
+[vars]
+WEB_ORIGIN = "https://CHANGEME.vercel.app"
+API_AUTH_URL = "https://expo-news-tabs-api.CHANGEME.workers.dev"
+
+# Uncomment + fill in to bind a custom domain. Until then the Worker is
+# reachable at <name>.<your-subdomain>.workers.dev.
+# [[routes]]
+# pattern = "api.example.com/*"
+# zone_name = "example.com"

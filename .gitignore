@@ -18,3 +18,8 @@ apps/mobile/ios/
 .env.*.local
 .env.local
 
+# wrangler local dev secrets — `.dev.vars.example` IS committed as a
+# template, the real `.dev.vars` is not.
+.dev.vars
+.wrangler/
+
